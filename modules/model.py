@@ -14,10 +14,10 @@ class Model(LoggingModule):
         
         self.num_layers = cfg.num_layers
         self.max_seq_len = cfg.max_seq_len
-        self.vocab_len = cfg.vocab_len
+        self.vocab_len = cfg.vocab_len + 3 # the 3 is the bos, eos, and padding tokens
         self.max_batch_size = cfg.max_batch_size
         
-        self.token_embedder = nn.Embedding(cfg.vocab_len, cfg.dim)
+        self.token_embedder = nn.Embedding(self.vocab_len, cfg.dim)
         self.scale = cfg.dim ** 0.5 if cfg.scale_first_resid else 1.0
         
         self.layers = nn.ModuleList(Layer(cfg) for _ in range(cfg.num_layers))
@@ -42,7 +42,7 @@ class Model(LoggingModule):
         mask = torch.triu(mask, diagonal=1)
         self.register_buffer('mask', mask)
 
-        self.criterion = nn.CrossEntropyLoss(ignore_index = cfg.vocab_len - 1) # ignore the padding token
+        self.criterion = nn.CrossEntropyLoss(ignore_index = self.vocab_len - 1) # ignore the padding token
 
     @log_io
     def forward( # this function is specifically for training, not inference
@@ -52,7 +52,7 @@ class Model(LoggingModule):
         target_token_ids: torch.Tensor = None,
     ) -> (torch.Tensor, torch.Tensor):
         batch_size, seq_len = input_token_ids.shape
-
+        
         if target_token_ids is not None: # if training
             assert input_token_ids.shape == target_token_ids.shape
             assert seq_len == self.max_seq_len

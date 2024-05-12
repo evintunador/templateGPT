@@ -11,9 +11,13 @@ class ModelConfig:
     """
     # general hyperparameters
     dim: int = 64
-    vocab_len: int = None # will be set later according to what tokenizer you choose
     device: str = 'cuda' if torch.cuda.is_available() else 'cpu' # can't do MPS bc metal doesn't support complex64 used in RoPE
     dropout_rate = 0.1 # percent of neurons to set to 0 during training as a way of adding randomness & improving generalization
+
+    # tokenizer
+    tokenizer: str = 'bpe' # default & currently only option is 'bpe'. must choose from one of the folders in 'tokenizers/'
+    vocab_len: int = 2048 # options assuming 'bpe' are 95 (character-wise), 128, 256, 512, 1024, 2048
+    # ^ that number does not include the three tokens bos, eos, and pad
 
     # Residual Layers
     num_layers: int = 4 # small models should err on the side of many many layers at the expense of attention & mlp sizes

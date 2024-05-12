@@ -58,6 +58,54 @@ def torcherize_batch(
 #
 #    # Ensure data types are correct
 #    return x.to(torch.long), y.to(torch.long)
+
+###########################################################
+###################### DYNAMIC IMPORTING ##################
+###########################################################
+
+# allows us to import functions specific to a given model project, meaning you can change those functions in your project & stuff still works
+import importlib
+def import_from_nested_path(folders, file, items):
+    try:
+        # Construct the module path from a list of folders
+        module_path = ".".join(folders) + "." + file
+        
+        # Dynamically import the module
+        module = importlib.import_module(module_path)
+        
+        # Extract specific items (functions, classes, etc.)
+        imported_items = {}
+        for item in items:
+            if hasattr(module, item):
+                imported_items[item] = getattr(module, item)
+            else:
+                print(f"{item} is not available in {module_path}")
+        return imported_items
+                
+    except ImportError as e:
+        print(f"Failed to import module: {e}")
+
+# Example usage
+#imported_objects = import_from_nested_path(['tokenizers', 'bpe'], 'tokenizer', ['get_tokenizer'])
+#get_tokenizer = imported_objects.get('get_tokenizer')
+
+# a wrapper to force a given function to behave using a specified working directory rather than the current working directory
+import os
+def run_in_directory(func, path, *args, **kwargs):
+    original_dir = os.getcwd()  # Save the current directory
+    os.chdir(path)  # Change to the target directory
+    try:
+        result = func(*args, **kwargs)  # Execute the function
+    finally:
+        os.chdir(original_dir)  # Change back to the original directory
+    return result
+
+# Example usage
+#def example_function():
+    #print("Current Working Directory:", os.getcwd())
+
+# Calling the function with a custom directory
+#run_in_directory(example_function, "models/customGPT/")
     
 ###########################################################
 ############# SAVE / LOAD MODELS ##########################
@@ -104,11 +152,10 @@ def load_model(
     name: str,
     device: str = 'cuda' if torch.cuda.is_available() else 'cpu',
 ):
-    from config import ModelConfig
-    from tokenizers.bpe.tokenizer import get_tokenizer
-    from modules.model import Model
-
     model_name = f'trained/{name}'
+
+    # the config
+    from config import ModelConfig
 
     # Deserialize the JSON file back to a dictionary
     with open(f'{model_name}/model_config.json', 'r') as f:
@@ -117,10 +164,14 @@ def load_model(
     # Convert the dictionary back to a Config object
     cfg = ModelConfig(**config_dict)
     cfg.device = device
-    
-    # tokenizer
-    vocab_size = cfg.vocab_len - 3
-    tokenizer = get_tokenizer(vocab_size) 
+
+    # the tokenizer
+    imported_objects = import_from_nested_path(['tokenizers', cfg.tokenizer], 'tokenizer', ['get_tokenizer'])
+    get_tokenizer = imported_objects.get('get_tokenizer')
+    tokenizer = get_tokenizer(size = cfg.vocab_len)
+
+    # the model itself
+    from modules.model import Model
     
     # Initialize a blank model
     model = Model(cfg).to(cfg.device) 
@@ -129,7 +180,7 @@ def load_model(
     path = f'{model_name}/model.pth'
     model.load_state_dict(torch.load(path)) 
     
-    print(cfg, '\n\n', sum(p.numel() for p in model.parameters())/1e3, 'K parameters')
+    print(f'{sum(p.numel() for p in model.parameters())/1e3}K parameters\n{cfg}\n{model}')
 
     return model, tokenizer, cfg
 

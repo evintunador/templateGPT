@@ -95,7 +95,7 @@ def load_tokenizer_data(path):
 
 def get_tokenizer(size: int = 2048):
     """
-    sizes include 95, 128, 256, 512, 1024, & 2048
+    bpe sizes include 95, 128, 256, 512, 1024, & 2048
     """
     path = f'tokenizers/bpe/models/{size}.model'
     tokenizer_data = load_tokenizer_data(path)
