@@ -16,14 +16,13 @@ class MLP(LoggingModule):
         dropout_rate: float = 0.1,
     ):
         super().__init__()
-        self.hidden_size = hidden_dim
         self.dropout_rate = dropout_rate
 
         # the up, down, and (optional) gate projections
+        self.Wup = nn.Linear(input_dim, hidden_dim, bias)
         self.gated = gated
-        if gated: self.Wgate = nn.Linear(input_dim, self.hidden_size, bias)
-        self.Wup = nn.Linear(input_dim, self.hidden_size, bias)
-        self.Wdown = nn.Linear(self.hidden_size, output_dim, bias)
+        if gated: self.Wgate = nn.Linear(input_dim, hidden_dim, bias)
+        self.Wdown = nn.Linear(hidden_dim, output_dim, bias)
 
         # Mapping norm types to their respective methods
         self.nonlinearities = {

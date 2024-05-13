@@ -10,29 +10,30 @@ class ModelConfig:
     Yes I know dropout_rate should probably be in TrainConfig but it was easier to implement from here
     """
     # general hyperparameters
-    dim: int = 64
+    dim: int = 32
     device: str = 'cuda' if torch.cuda.is_available() else 'cpu' # can't do MPS bc metal doesn't support complex64 used in RoPE
     dropout_rate = 0.1 # percent of neurons to set to 0 during training as a way of adding randomness & improving generalization
 
     # tokenizer
     tokenizer: str = 'bpe' # default & currently only option is 'bpe'. must choose from one of the folders in 'tokenizers/'
-    vocab_len: int = 2048 # options assuming 'bpe' are 95 (character-wise), 128, 256, 512, 1024, 2048
+    vocab_len: int = 8192 # options assuming 'bpe' are 95 (character-wise), 128, 256, 512, 1024, 2048, 4096, & 8192
     # ^ that number does not include the three tokens bos, eos, and pad
 
     # Residual Layers
-    num_layers: int = 4 # small models should err on the side of many many layers at the expense of attention & mlp sizes
+    num_layers: int = 32#16#8# small models should err on the side of many many layers at the expense of attention & mlp sizes
     second_resid_norm: bool = False # True adds an extra Norm after the attn & MLP, like in Grok. Only recommended if using RMSNorm
     
     # Multi-Layer Perceptrion
-    mlp_hidden_mult: int = 2.667 # if mlp_gated = True then this has 1.5x the parameters of if mlp_gated = False
+    mlp_hidden_mult: int = 2#4#8# if mlp_gated = True then this has 1.5x the parameters of if mlp_gated = False
     mlp_bias: bool = False # whether to use bias weights. Llama3 does not and I'm partial to their choice
     mlp_nonlinearity: str = 'SiLU' # options are 'GeLU', 'SiLU', and 'ReLU'(not recommended)
-    mlp_gated: bool = True # Turns GeLU into GeGLU, giving you 50% more MLP parameters to train but also more expressiveness
+    mlp_gated: bool = True # Turns SiLU into SwiGLU, GeLU into GeGLU, etc
+    # ^ if gated == True, mlp_hidden_mult will automatically adjust to maintain parameter count
 
     # Multi-Query Attention
-    num_q_heads: int = 4 # `num_q_heads % num_kv_heads == 0` must be true
+    num_q_heads: int = 2#4#8# `num_q_heads % num_kv_heads == 0` must be true
     num_kv_heads: int = 1 # set =num_q_heads to revert to regular multi-head attention (not recommended)
-    head_dim: int = 16 # most common choices are 32, 64 and especially 128 bc those are what works with FlashAttention
+    head_dim: int = 16#18#20# most common choices are 32, 64 and especially 128 bc those are what works with FlashAttention
     theta: float = 10_000 # 10_000 is the most common choice. Llama3 uses 50_000
     max_seq_len: int = 256 # 512 is the most my 8gb of ram can handle
 
@@ -56,31 +57,31 @@ class TrainConfig:
     # name of the folder the model will be saved into
     model_name = f'{time.strftime("%Y-%m-%d|%H-%M-%S")}'
     
-    weight_decay: float = 0.02
+    weight_decay: float = 0.05
     batch_size: int = 32
     
     # total number of batches to run over the course of training
-    max_iters: int = 100 # i recommend at least 1_000
+    max_iters: int = 50 # i recommend at least 1_000
     # how often to print out an update on how training is going
-    eval_interval: int = 10 # doing this too often slows things down hella but also gives detailed log data
+    eval_interval: int = 50 # doing this too often slows things down hella but also gives detailed log data
     # how many samples to take at each evaluation. more means a more accurate loss/perplexity calculation
-    eval_samples: int = 1 # this number can things down hella. each sample is almost like doing an extra training iteration
+    eval_samples: int = 1 # this number can slow things down. each sample is almost like doing an extra training iteration
     # how often to save a model checkpoint
     checkpoint_interval: int = None # eval_interval # set to None if you don't want checkpoints
     
     ### to visualize the learning rate schedule you define here, see cell 7 of training.ipynb
 
     # Initial learning rate to start from during the warmup
-    lr_init: float = 1e-5
+    lr_init: float = 0.0
     # Maximum and minimum learning rates during annealing
     lr_max: float = 1e-1
-    lr_min: float = 1e-3
+    lr_min: float = 1e-4
     # if you'd like a flat learning rate, set lr_init = lr_min = lr_max and ignore the variables below
     
     # number of iterations for a linear warmup from lr_min to lr_max
-    warmup_iters: int = int(max_iters * 0.1) # if you don't want to use a lr warmup, set = 0
+    warmup_iters: int = int(max_iters * 0.05) # if you don't want to use a lr warmup, set = 0
     # number of iterations for a constant learning rate of lr_min at the end of training
-    final_flat_iters: int = int(max_iters * 0.1) # if you don't want to use a final flat lr at the end, set = 0
+    final_flat_iters: int = int(max_iters * 0.3) # if you don't want to use a final flat lr at the end, set = 0
     
     # type of annealment to use. Annealment is when the learning rate decreases over the course of training
     anneal_type: str = 'cos' # options: 'cos'(recommended) and 'lin'
