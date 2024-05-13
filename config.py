@@ -61,9 +61,9 @@ class TrainConfig:
     batch_size: int = 32
     
     # total number of batches to run over the course of training
-    max_iters: int = 50 # i recommend at least 1_000
+    max_iters: int = 5 # i recommend at least 1_000
     # how often to print out an update on how training is going
-    eval_interval: int = 50 # doing this too often slows things down hella but also gives detailed log data
+    eval_interval: int = 5 # doing this too often slows things down hella but also gives detailed log data
     # how many samples to take at each evaluation. more means a more accurate loss/perplexity calculation
     eval_samples: int = 1 # this number can slow things down. each sample is almost like doing an extra training iteration
     # how often to save a model checkpoint
