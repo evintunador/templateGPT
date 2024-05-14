@@ -28,13 +28,15 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
     - `model.py`: the primary class for our GPT
     - `mqa.py`: [multi-query attention](https://arxiv.org/abs/1911.02150) with pre-computed [rotary positional encodings](https://arxiv.org/abs/2104.09864)
     - `norm.py`: a norm module with an optional affine layer that allows you to switch between [RMSNorm](https://arxiv.org/abs/1910.07467), [LayerNorm](https://pytorch.org/docs/stable/generated/torch.nn.LayerNorm.html) and [CosineNorm](https://arxiv.org/pdf/1702.05870) easily using a setting over in `config.py`. Adding different normalization methods is also absurdly easy
-- `tokenizers/bpe/`
-    - `models/`
-        - `{95, 128, 256, 512, 1024, 2048}.model`: the 95 one is character-wise tokenization. All others are [byte-pair encoding](https://huggingface.co/learn/nlp-course/en/chapter6/5), except instead of bytes i use the 95 unique characters that show up in the TinyStories dataset
-    - `build.ipynb`: the notebook where i built my bpe tokenizers. My pairing rules could certainly be improved upon
-    - `tokenizer.py`: an overly-simplistic and annoyingly inefficient tokenizer with bos & eos tokens, post-sequence padding, and a `display` function to help you visualize how a given string is broken down
+- `tokenizers/`: a folder where you store your tokenizers
+    - `bpe/`: a [byte-pair encoding](https://huggingface.co/learn/nlp-course/chapter6/5) tokenizer except I use the characters that show up in TinyStories instead of bytes
+        - `build.ipynb`: the notebook where i built my bpe tokenizers. My pairing rules could certainly be improved upon
+        - `tokenizer.py`: an overly-simplistic and annoyingly inefficient tokenizer with bos & eos tokens, post-sequence padding, and a `display` function to help you visualize how a given string is broken down
+        - `models/`
+            - `{95, 128, 256, 512, 1024, 2048, 4096, 8192}.model`: different tokenizer sizes, each a subset of the next. the 95 one is character-wise tokenization
 - `trained/`
-    - `customGPT_0.5m_{short_and_thick, 5foot11_and_skinnyfat, tall_and_skinny}/`: a series of 0.5m parameter models designed to be compared against one another. they're not large enough to get intelligible output
+    - `customGPT_1m_{short_and_thicc, 5ft11_and_skinnyfat, tall_and_skinny}/`: a series of 1m parameter models designed to be compared against one another in terms of number of layers, MLP width, and number of attention heads. they're not large enough to get intelligible output
+    - `customGPT_2m_{RMSNorm, LayerNorm, CosineNorm}`: a series of 2m parameter models designed to be compared against one another in terms of their chosen normalization technique. At this size you start to see a little bit of coherence in terms of repeated objects/characters in the story.
         - `log_data.csv`: record of loss & perplexity data over the course of training
         - `model_config.json`: hyperparameters of the model
         - `model.pth`: weights of the model
@@ -56,6 +58,7 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
     - [ ] update `model_evaluation.ipynb`'s teacher-forcing topk analysis to get more accurate %'s using batches
 
 ### potential future TODOs
+- [ ] switch to a better tokenizer. I'd rather build one from scratch than download from the internet but I also don't care enough about tokenizers to make one more complicated than the current BPE, ugh
 - [ ] setup .py files to be runnable in terminal rather than in the .ipynb files
 - [ ] switch to [TinyGrad](https://github.com/tinygrad/tinygrad)? very tempting bc then I could use apple silicon gpu (pytorch currently doesn't support complex numbers, which are used in [rotary positional encodings](https://arxiv.org/abs/2104.09864), on apple silicon) but I feel like it makes more sense to stick with pytorch for public accessibility reasons
 - [ ] add option to continually train pre-existing models & update its training data/hyperparameters accordingly
