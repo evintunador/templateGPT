@@ -1,0 +1,1 @@
+{"weight_decay": 0.05, "batch_size": 32, "max_iters": 5000, "eval_interval": 50, "eval_samples": 1, "checkpoint_interval": null, "lr_init": 1e-06, "lr_max": 0.1, "lr_min": 0.001, "warmup_iters": 50, "final_flat_iters": 500, "anneal_type": "cos", "num_restarts": 3, "T_mult": 2}
