@@ -1,4 +1,4 @@
-# customGPT
+# templateGPT
 ## about
 This is the model I edit whenever I want to test a new transformer architecture idea I have. It's designed to be flexible with many large changes being tweakable from the config, easy to demonstrate what's happening in the progression of tensor shapes, and easy to read/edit the code. Feel free to toy around and build off of it, this repo is actually a template
 
