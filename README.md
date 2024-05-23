@@ -29,21 +29,25 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
     - `mqa.py`: [multi-query attention](https://arxiv.org/abs/1911.02150) with pre-computed [rotary positional encodings](https://arxiv.org/abs/2104.09864)
     - `norm.py`: a norm module with an optional affine layer that allows you to switch between [RMSNorm](https://arxiv.org/abs/1910.07467), [LayerNorm](https://pytorch.org/docs/stable/generated/torch.nn.LayerNorm.html) and [CosineNorm](https://arxiv.org/pdf/1702.05870) easily using a setting over in `config.py`. Adding different normalization methods is also absurdly easy
 - `tokenizers/`: a folder where you store your tokenizers
-    - `bpe/`: a [byte-pair encoding](https://huggingface.co/learn/nlp-course/chapter6/5) tokenizer except I use the characters that show up in TinyStories instead of bytes
+    - `bpe_v1/`: a [byte-pair encoding](https://huggingface.co/learn/nlp-course/chapter6/5) tokenizer except I use the characters that show up in TinyStories instead of bytes. This is the one that gets used in all the models that are currently trained, but if you're training a new model and don't care about comparing it against the pre-existing ones then I recommend using `bpe_v2/`
         - `build.ipynb`: the notebook where i built my bpe tokenizers. My pairing rules could certainly be improved upon
         - `tokenizer.py`: an overly-simplistic and annoyingly inefficient tokenizer with bos & eos tokens, post-sequence padding, and a `display` function to help you visualize how a given string is broken down
         - `models/`
             - `{95, 128, 256, 512, 1024, 2048, 4096, 8192}.model`: different tokenizer sizes, each a subset of the next. the 95 one is character-wise tokenization
+    - `bpe_v2`: a slightly updated version of the one above that uses GPT4's regex instead of my own shitty from-scratch rules. Not currently implemented in any models
+        - `...`
 - `trained/`
     - `customGPT_1m_{short_and_thicc, 5ft11_and_skinnyfat, tall_and_skinny}/`: a series of 1m parameter models designed to be compared against one another in terms of number of layers, MLP width, and number of attention heads. they're not large enough to get intelligible output
-    - `customGPT_2m_{RMSNorm, LayerNorm, CosineNorm}`: a series of 2m parameter models designed to be compared against one another in terms of their chosen normalization technique. At this size you start to see a little bit of coherence in terms of repeated objects/characters in the story.
-        - `log_data.csv`: record of loss & perplexity data over the course of training
-    - `customGPT_3m_{GatedMLP, NotGatedMLP}`: a series of 3m parameter models designed to be compared against one another to shed light on whether it's better to use old-fashioned or gated MLPs. I was surprised at how clearly better the gated MLP did
-    - `customGPT_4m_{GeGLU, SwiGLU}`: a series of 4m parameter models designed to be compared against one another to shed light on which of the two most common activation functions right now are better. Given that Google uses GeGLU, Meta uses SwiGLU, and the industry as a whole hasn't settled on one or the other, it was unsurprising to see these two perform similarly. At this size you start to occasionally see multiple sentences in a row almost making some sense.
         - `model_config.json`: hyperparameters of the model
         - `model.pth`: weights of the model
         - `train_config.json`: hyperparameters of the training loop used
         - `log_data.csv`: a record of loss and a couple other key metrics over the course of training
+    - `customGPT_2m_{RMSNorm, LayerNorm, CosineNorm}`: a series of 2m parameter models designed to be compared against one another in terms of their chosen normalization technique. At this size you start to see a little bit of coherence in terms of repeated objects/characters in the story.
+        - `...`
+    - `customGPT_3m_{GatedMLP, NotGatedMLP}`: a series of 3m parameter models designed to be compared against one another to shed light on whether it's better to use old-fashioned or gated MLPs. I was surprised at how clearly better the gated MLP did
+        - `...`
+    - `customGPT_4m_{GeGLU, SwiGLU}`: a series of 4m parameter models designed to be compared against one another to shed light on which of the two most common activation functions right now are better. Given that Google uses GeGLU, Meta uses SwiGLU, and the industry as a whole hasn't settled on one or the other, it was unsurprising to see these two perform similarly. At this size you start to occasionally see multiple sentences in a row almost making some sense.
+        - `...`
 - `inference.ipynb`: open this notebook if you just want to see the output of one of the models
 - `model_comparison.ipynb`: open this notebook to compare different models against each other. includes loss curve plots and topk teacher-forcing accuracy rate
 - `testing_modules.ipynb`: creates easy printouts that allow you to follow the progression of tensor shapes for demonstration & debugging purposes of all the modules in `model.py`. If you're building new modules for a novel architecture idea you have then this notebook will be of extreme value to you in debugging & visualization
@@ -51,14 +55,15 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
 - `config.py`: all of the editable model and training settings
 - `inference.py`: functions for performing inference used in multiple `.ipynb` files
 - `model_comparison.py`: functions for comparing models used in `model_comparison.ipynb`
-- `requirements.txt` - I should probably change this to only include the packages that are actually necessary and not be so strict on versions. The command I used to get this list is `pip freeze | grep -v " @ file://" > requirements.txt`, lmk if you know of a better method
+- `requirements.txt` - I should probably change this to only include the packages that are actually necessary and not be so strict on versions. The command I used to get this list is `pip freeze | grep -v " @ file://" > requirements.txt` and then I deleted the version numbers, lmk if you know of a better method
 - `tools.py`: A variety of functions & classes that don't fit elsewhere and/or are used by more than one of the jupyter notebooks. I should prolly find a better way to organize these
 - `train.py`: functions for training a model, used in `train.ipynb`
 
 ## definite eventual TODOs
 - [ ] fix & enable batched inference
     - [ ] update `model_evaluation.ipynb`'s teacher-forcing topk analysis to get more accurate %'s using batches
-- [ ] switch to a better tokenizer. I'd rather build one from scratch than download from the internet but I also don't care enough about tokenizers to make one more complicated than the current BPE, ugh
+- [x] build a better tokenizer
+    - [ ] train new models with this better tokenizer in `tokenizers/bpe_v2/`
 - [ ] go back and make sure model checkpointing is working. at one point it was but i've changed so much since then and haven't bothered using it so i'd bet it's broken
 
 ### potential future TODOs
