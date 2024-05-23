@@ -65,6 +65,7 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
 - [x] build a better tokenizer
     - [ ] train new models with this better tokenizer in `tokenizers/bpe_v2/`
 - [ ] go back and make sure model checkpointing is working. at one point it was but i've changed so much since then and haven't bothered using it so i'd bet it's broken
+- [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the stories are shorter than the model's maximum context length
 
 ### potential future TODOs
 - [ ] create `hyperparameter_search.ipynb` that knows to cancel a run if it's going over your available vram usage
