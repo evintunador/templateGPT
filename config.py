@@ -15,7 +15,7 @@ class ModelConfig:
     dropout_rate = 0.1 # percent of neurons to set to 0 during training as a way of adding randomness & improving generalization
 
     # tokenizer
-    tokenizer: str = 'bpe_v2_gpt4' # must choose from one of the folders in 'tokenizers/'. current options: 'bpe_v1', 'bpe_v2_gpt2', 'bpe_v2_gpt4'
+    tokenizer: str = 'bpe_v2' # must choose from one of the folders in 'tokenizers/'. current options: 'bpe_v1', 'bpe_v2'
     vocab_len: int = 8192 # options assuming 'bpe' are 95 (character-wise), 128, 256, 512, 1024, 2048, 4096, & 8192
     # ^ that number does not include the three tokens bos, eos, and pad
 
