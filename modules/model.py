@@ -45,7 +45,7 @@ class Model(LoggingModule):
         self.criterion = nn.CrossEntropyLoss(ignore_index = self.vocab_len - 1) # ignore the padding token
 
     @log_io
-    def forward( # this function is specifically for training, not inference
+    def forward(
         self, 
         input_token_ids: torch.Tensor, 
         cache_len: int = 0,
