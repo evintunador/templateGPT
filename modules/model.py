@@ -52,7 +52,8 @@ class Model(LoggingModule):
         target_token_ids: torch.Tensor = None,
     ) -> (torch.Tensor, torch.Tensor):
         input_token_ids = input_token_ids.to(self.device)
-        target_token_ids = target_token_ids.to(self.device)
+        if target_token_ids is not None:
+            target_token_ids = target_token_ids.to(self.device)
         
         batch_size, seq_len = input_token_ids.shape
         
