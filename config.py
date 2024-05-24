@@ -39,7 +39,7 @@ class ModelConfig:
 
     # normalization
     scale_first_resid: bool = True # whether to multiply the first residual state by sqrt(dim)
-    norm_type: str = 'RMSNorm' # options are 'RMSNorm'(recommended), 'LayerNorm', and 'CosineNorm'. Add more options in 'model.py'
+    norm_type: str = 'RMSNorm' # options are 'RMSNorm'(recommended), 'LayerNorm', and 'CosineNorm'. Add more options in 'norm.py'
     norm_affine: bool = True # whether to use a linear layer after each norm. recommended especially if you're using LayerNorm or CosineNorm
     norm_bias: bool = True # whether to add a bias to the linear layer after each norm. doesn't do anything if norm_affine == False
     eps: float = 1e-6 # small constant to prevent division by 0. Not really worth editing
