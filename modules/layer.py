@@ -96,7 +96,8 @@ class Layer(LoggingModule):
             self.pre_attn_norm(x),
             freqs_cis, 
             mask, 
-            cache_len
+            cache_len,
+            training
         )
         if training: F.dropout(dx, self.dropout_rate)
         if self.second_norm: dx = self.post_attn_norm(dx)
@@ -104,7 +105,7 @@ class Layer(LoggingModule):
 
     @log_io
     def mlp_connect(self, x: torch.Tensor, training: bool) -> torch.Tensor:
-        dx = self.mlp(self.pre_mlp_norm(x))
+        dx = self.mlp(self.pre_mlp_norm(x), training)
         if training: F.dropout(dx, self.dropout_rate)
         if self.second_norm: dx = self.post_mlp_norm(dx)
         return dx
