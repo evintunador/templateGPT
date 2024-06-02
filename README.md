@@ -71,6 +71,11 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
 - [ ] switch to comparing models according to their non-embedding parameters instead of total parameters
 
 ### potential future TODOs
+- [ ] add random useful stuff from karpathy's nanoGPT
+	- [ ] flash-attention option on cuda
+	- [ ] parameter count printer function built-in
+	- [ ] switch to measuring non-embedding parameters
+	- [ ] look for more
 - [ ] create `hyperparameter_search.ipynb` that knows to cancel a run if it's going over your available vram usage
     - [ ] add a more complicated (regression?) analysis to `model_comparison.ipynb` to help us analyze the hyperparameter search
 - [ ] setup .py files to be runnable in terminal rather than in the .ipynb files
