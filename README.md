@@ -62,6 +62,10 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
 - `train.py`: functions for training a model, used in `train.ipynb`
 
 ## definite eventual TODOs
+- [ ] incorporate the tons of tiny edits from [FutureFormer](https://github.com/evintunador/FutureFormer)
+    - [ ] new MQA that's flexible as either self-attention or cross-attention
+    - [ ] new logging mechanism that understands when you input parameters out of order?
+    - [ ] there are likely more
 - [ ] fix & enable batched inference
     - [ ] update `model_evaluation.ipynb`'s teacher-forcing topk analysis to get more accurate %'s using batches
 - [x] build a better tokenizer
