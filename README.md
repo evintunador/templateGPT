@@ -66,6 +66,7 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
     - [ ] new MQA that's flexible as either self-attention or cross-attention
     - [ ] new logging mechanism that understands when you input parameters out of order?
     - [ ] there are likely more
+    - [ ] instead of the output layer always weight-sharing with the embedding matrix, make the sharing optional
 - [ ] fix & enable batched inference
     - [ ] update `model_evaluation.ipynb`'s teacher-forcing topk analysis to get more accurate %'s using batches
 - [x] build a better tokenizer
@@ -78,7 +79,7 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
 - [ ] add random useful stuff from karpathy's nanoGPT
 	- [ ] flash-attention option on cuda
 	- [ ] parameter count printer function built-in
-	- [ ] switch to measuring non-embedding parameters
+	- [ ] switch to measuring non-embedding parameters for model comparisons
 	- [ ] look for more
 - [ ] create `hyperparameter_search.ipynb` that knows to cancel a run if it's going over your available vram usage
     - [ ] add a more complicated (regression?) analysis to `model_comparison.ipynb` to help us analyze the hyperparameter search
