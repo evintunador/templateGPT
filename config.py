@@ -78,6 +78,10 @@ class TrainConfig:
     eval_samples: int = 1 # this number can slow things down. each sample is almost like doing an extra training iteration
     # how often to save a model checkpoint
     checkpoint_interval: int = None # eval_interval # set to None if you don't want checkpoints
+
+    # AdamW Hyperparameters
+    beta1: float = 0.9
+    beta2: float = 0.95
     
     ### to visualize the learning rate schedule you define here, see cell 7 of training.ipynb
 
