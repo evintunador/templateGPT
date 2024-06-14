@@ -18,7 +18,7 @@ class ModelConfig:
     tokenizer: str = 'bpe_v2_tinyStories' # must choose from one of the folders in 'tokenizers/'
         # current options: 'bpe_v1_tinyStories' & 'bpe_v2_tinyStories'
         # note: it is possible to train a model on a dataset different from what your tokenizer was trained on
-    vocab_len: int = 128 # options assuming 'bpe_vN_tinyStories' are 95 (character-wise), 128, 256, 512, 1024, 2048, 4096, & 8192
+    vocab_len: int = 512 # options assuming 'bpe_vN_tinyStories' are 95 (character-wise), 128, 256, 512, 1024, 2048, 4096, & 8192
     # ^ that number does not include the three tokens bos, eos, and pad
 
     # Residual Layers

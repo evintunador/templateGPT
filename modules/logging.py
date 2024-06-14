@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-
 import functools
 import inspect
 
@@ -15,7 +14,7 @@ def log_io(func):
         def log_item(item, name, level=0, is_root=False):
             indent = "    " * level
             if isinstance(item, torch.Tensor):
-                print(f"{indent}Tensor '{name}' shape: {item.shape}")
+                print(f"{indent}Tensor '{name}' shape: {item.shape} dtype: {item.dtype}")
             elif isinstance(item, tuple):
                 if is_root and level == 0:
                     # Root level tuple, don't print it as a tuple unless it's a "true" tuple
@@ -32,21 +31,29 @@ def log_io(func):
                         print(f"{indent}    Tensor '{name}[{idx}]' shape: {sub_item.shape} dtype: {sub_item.dtype}")
                     else:
                         log_item(sub_item, f"{name}[{idx}]", level + 1)
+            elif isinstance(item, dict):
+                print(f"{indent}Dict '{name}':")
+                for key, sub_item in item.items():
+                    log_item(sub_item, f"{name}[{key}]", level + 1)
             elif isinstance(item, int):
                 print(f"{indent}Integer '{name}': Value={item}")
             elif isinstance(item, float):
                 print(f"{indent}Float '{name}': Value={item}")
             else:
                 print(f"{indent}Other-type '{name}': Type={type(item).__name__}, Value={item}")
+        
+        sig = inspect.signature(func)
+        bound_args = sig.bind(self, *args, **kwargs)
+        bound_args.apply_defaults()
 
         print(f"\n{'='*10}Entering {self.__class__.__name__}.{func.__name__}{'='*10}")
         print("Inputs:")
-        arg_names = inspect.getfullargspec(func).args[1:]  # Excluding 'self'
-        arg_values = args + tuple(kwargs.values())
-        for name, value in zip(arg_names, arg_values):
-            log_item(value, name)
+        for name, value in bound_args.arguments.items():
+            if name != 'self':
+                log_item(value, name)
 
         result = func(self, *args, **kwargs)
+        
         print("\nOutputs:")
         if isinstance(result, tuple):
             log_item(result, "output", is_root=True)

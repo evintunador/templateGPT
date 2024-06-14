@@ -94,7 +94,7 @@ def generate(
 
         # running the model
         with torch.no_grad():
-            logits, _ = model(
+            logits, kv_cache = model(
                 input_token_ids = tokens[:,-max_context_window:], 
                 cache_len = cache_len,
                 kv_cache = kv_cache

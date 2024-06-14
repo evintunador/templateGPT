@@ -98,5 +98,8 @@ class Model(LoggingModule):
             )
         else:
             loss = None
-            
-        return logits, loss
+
+        if loss is not None: # if we're training, the second thing to be outputted will be the loss
+            return logits, loss
+        else: # if we're doing inference, the second thing to be outputted will be the updated kv_cache
+            return logits, kv_cache
