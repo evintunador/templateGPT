@@ -31,6 +31,7 @@ class MQA(LoggingModule): # multi-query self-attention https://arxiv.org/abs/191
         assert num_q_heads % num_kv_heads == 0, f'num_q_heads must be divisible by num_kv_heads'
         self.head_dim = dim // num_q_heads if head_dim is None else head_dim
         self.dropout_rate = dropout_rate
+        self.device = device
 
         self.Wq = nn.Linear(dim, num_q_heads * head_dim, bias=bias)
         self.Wk = nn.Linear(dim, self.num_kv_heads * head_dim, bias=bias)
@@ -77,13 +78,17 @@ class MQA(LoggingModule): # multi-query self-attention https://arxiv.org/abs/191
         queries = queries.transpose(1, 2)  # (bs, num_q_heads, seq_len, head_dim)
         keys = keys.transpose(1, 2)  # (bs, num_q_heads, cache_len + seq_len, head_dim)
         values = values.transpose(1, 2)  # (bs, num_q_heads, cache_len + seq_len, head_dim)
-        
-        logits = self.attend(queries, keys, training)
-        if mask is not None:
-            logits = logits + mask  # (bs, num_q_heads, seq_len, cache_len + seq_len)
-        scores = self.calc_output(logits, values, training) 
-        
-        output = self.Wo(scores)
+
+        if self.device == 'cuda' or self.device == 'mps': # perform flash attention if we've got a GPU
+            scores = self.flash_attention(queries, keys, values)
+        else: # otherwise we'll do regular attention
+            logits = self.attend(queries, keys, training)
+            if mask is not None:
+                logits = logits + mask  # (bs, num_q_heads, seq_len, cache_len + seq_len)
+            scores = self.calc_output(logits, values, training) # (batch_size, n_heads, seq_len, head_dim)
+
+        scores = scores.transpose(1, 2).contiguous().view(batch_size, seq_len, -1) # (batch_size, seq_len, n_heads * head_dim)
+        output = self.Wo(scores) # (batch_size, seq_len, dim)
         if training: output = F.dropout(output, self.dropout_rate)
         
         return output, kv_cache
@@ -112,6 +117,10 @@ class MQA(LoggingModule): # multi-query self-attention https://arxiv.org/abs/191
         return keys, values
 
     @log_io
+    def flash_attention(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, is_causal=True):
+        return F.scaled_dot_product_attention(q, k, v, is_causal=True)
+
+    @log_io
     def attend(self, queries: torch.Tensor, keys: torch.Tensor, training: bool) -> torch.Tensor:
         return torch.matmul(queries, keys.transpose(2, 3)) * (self.head_dim ** -0.5)
     
@@ -120,5 +129,4 @@ class MQA(LoggingModule): # multi-query self-attention https://arxiv.org/abs/191
         batch_size, _, seq_len, _ = logits.shape
         scores = F.softmax(logits, dim=-1)
         if training: scores = F.dropout(scores, self.dropout_rate)
-        output = scores @ values # [batch_size, n_heads, seq_len, head_dim]
-        return output.transpose(1, 2).contiguous().view(batch_size, seq_len, -1) # [batch_size, seq_len, n_heads * head_dim]
+        return scores @ values # (batch_size, n_heads, seq_len, head_dim)
