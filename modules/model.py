@@ -14,7 +14,10 @@ class Model(LoggingModule):
 
         self.num_layers = cfg.num_layers
         self.max_seq_len = cfg.max_seq_len
-        self.vocab_len = cfg.vocab_len + 3 # the 3 is the bos, eos, and padding tokens
+        self.vocab_len = cfg.vocab_len + 3 + 125
+            # the 3 is the bos, eos, and padding tokens
+            # the 125 are extra tokens to make the model more efficient at the kernel level
+            #     i should probably fix this at the tokenizer level instead but at this point it's too late & I'm lazy. maybe later
 
         # the generate() function in inference.py references these values to build kv cache
         self.head_dim = cfg.head_dim 
@@ -47,7 +50,7 @@ class Model(LoggingModule):
         mask = torch.triu(mask, diagonal=1)
         self.register_buffer('mask', mask)
 
-        self.criterion = nn.CrossEntropyLoss(ignore_index = self.vocab_len - 1) # ignore the padding token
+        self.criterion = nn.CrossEntropyLoss(ignore_index = cfg.vocab_len + 2) # ignore the padding token
 
         # init params
         self.apply(self.__init__weights)
@@ -95,7 +98,7 @@ class Model(LoggingModule):
             training = False
 
         # initialize first residual state
-        x = self.token_embedder(input_token_ids) * self.scale # [batch_size, seq_len, dim]
+        x = self.token_embedder(input_token_ids) * self.scale # (batch_size, seq_len, dim)
         # run through the model's layers
         for i, layer in enumerate(self.layers):
             x, kv_cache_i = layer(
@@ -109,7 +112,7 @@ class Model(LoggingModule):
             # update the kv cache
             if kv_cache is not None: kv_cache[i] = kv_cache_i 
         # the final output of the model
-        logits = self.output(self.final_norm(x)) # [batch_size, seq_len, vocab_len]
+        logits = self.output(self.final_norm(x)) # (batch_size, seq_len, vocab_len)
 
         if training:
             loss = self.criterion(
