@@ -13,6 +13,7 @@ class ModelConfig:
     dim: int = 32
     device: str = 'cuda' if torch.cuda.is_available() else 'cpu' # can't do MPS bc metal doesn't support complex64 used in RoPE
     dropout_rate = 0.1 # percent of neurons to set to 0 during training as a way of adding randomness & improving generalization
+    out_weight_share: bool = False # whether to share weights between output layer and input embedding layer
 
     # tokenizer
     tokenizer: str = 'bpe_v2_tinyStories' # must choose from one of the folders in 'tokenizers/'

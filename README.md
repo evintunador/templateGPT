@@ -66,7 +66,7 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
     - [ ] new MQA that's flexible as either self-attention or cross-attention
     - [ ] new logging mechanism that understands when you input parameters out of order?
     - [ ] there are likely more
-    - [ ] instead of the output layer always weight-sharing with the embedding matrix, make the sharing optional
+    - [x] instead of the output layer always weight-sharing with the embedding matrix, make the sharing optional
 - [x] fix & enable batched inference
     - [x] update `model_evaluation.ipynb`'s teacher-forcing topk analysis to get more accurate %'s using batches
 - [x] build a better tokenizer

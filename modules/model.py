@@ -31,6 +31,8 @@ class Model(LoggingModule):
             cfg.norm_bias, 
             cfg.eps
         )
+        self.output = nn.Linear(cfg.dim, self.vocab_len, bias=False)
+        if cfg.out_weight_share: self.token_embedder.weight = self.output.weight
 
         freqs_cis = precompute_freqs_cis(
             cfg.head_dim,
@@ -89,7 +91,7 @@ class Model(LoggingModule):
             # update the kv cache
             if kv_cache is not None: kv_cache[i] = kv_cache_i 
         # the final output of the model
-        logits = self.final_norm(x) @ self.token_embedder.weight.t() # [batch_size, seq_len, vocab_len]
+        logits = self.output(self.final_norm(x)) # [batch_size, seq_len, vocab_len]
 
         if training:
             loss = self.criterion(
