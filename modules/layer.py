@@ -23,6 +23,7 @@ class Layer(LoggingModule):
             cfg.num_q_heads,
             cfg.num_kv_heads,
             cfg.max_seq_len,
+            cfg.linear_bias,
             cfg.dropout_rate,
             cfg.device
         )
@@ -39,7 +40,7 @@ class Layer(LoggingModule):
             cfg.dim,
             cfg.mlp_nonlinearity,
             cfg.mlp_gated,
-            cfg.mlp_bias,
+            cfg.linear_bias,
             cfg.dropout_rate
         )
         if self.second_norm: 

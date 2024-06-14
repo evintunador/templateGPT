@@ -21,6 +21,7 @@ class MQA(LoggingModule): # multi-query self-attention https://arxiv.org/abs/191
         num_q_heads: int,
         num_kv_heads: int,
         max_seq_len: int,
+        bias: bool,
         dropout_rate: float = 0.1,
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
     ):
@@ -31,10 +32,13 @@ class MQA(LoggingModule): # multi-query self-attention https://arxiv.org/abs/191
         self.head_dim = dim // num_q_heads if head_dim is None else head_dim
         self.dropout_rate = dropout_rate
 
-        self.Wq = nn.Linear(dim, num_q_heads * head_dim, bias=False)
-        self.Wk = nn.Linear(dim, self.num_kv_heads * head_dim, bias=False)
-        self.Wv = nn.Linear(dim, self.num_kv_heads * head_dim, bias=False)
-        self.Wo = nn.Linear(num_q_heads * head_dim, dim, bias=False)
+        self.Wq = nn.Linear(dim, num_q_heads * head_dim, bias=bias)
+        self.Wk = nn.Linear(dim, self.num_kv_heads * head_dim, bias=bias)
+        self.Wv = nn.Linear(dim, self.num_kv_heads * head_dim, bias=bias)
+        self.Wo = nn.Linear(num_q_heads * head_dim, dim, bias=bias)
+        
+        # this flag designates Wo to have a different parameter initialization as defined in model.py
+        self.Wo.GPT_scale_init = 1
     
     @log_io
     def forward(

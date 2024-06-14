@@ -19,10 +19,13 @@ class MLP(LoggingModule):
         self.dropout_rate = dropout_rate
 
         # the up, down, and (optional) gate projections
-        self.Wup = nn.Linear(input_dim, hidden_dim, bias)
+        self.Wup = nn.Linear(input_dim, hidden_dim, bias=bias)
         self.gated = gated
-        if gated: self.Wgate = nn.Linear(input_dim, hidden_dim, bias)
-        self.Wdown = nn.Linear(hidden_dim, output_dim, bias)
+        if gated: self.Wgate = nn.Linear(input_dim, hidden_dim, bias=bias)
+        self.Wdown = nn.Linear(hidden_dim, output_dim, bias=bias)
+
+        # this flag designates Wdown to have a different parameter initialization as defined in model.py
+        self.Wdown.GPT_scale_init = 1
 
         # Mapping norm types to their respective methods
         self.nonlinearities = {

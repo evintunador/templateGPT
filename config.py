@@ -13,7 +13,8 @@ class ModelConfig:
     dim: int = 32
     device: str = 'cuda' if torch.cuda.is_available() else 'cpu' # can't do MPS bc metal doesn't support complex64 used in RoPE
     dropout_rate = 0.1 # percent of neurons to set to 0 during training as a way of adding randomness & improving generalization
-    out_weight_share: bool = False # whether to share weights between output layer and input embedding layer
+    out_weight_share: bool = True # whether to share weights between output layer and input embedding layer
+    linear_bias: bool = False # whether to use bias weights on our linear layers. Llama3 does not and I'm partial to their choice
 
     # tokenizer
     tokenizer: str = 'bpe_v2_tinyStories' # must choose from one of the folders in 'tokenizers/'
@@ -28,7 +29,6 @@ class ModelConfig:
     
     # Multi-Layer Perceptrion
     mlp_hidden_mult: int = 4 # how wide the hidden dimension of the MLP should be. if mlp_gated = True that's not quite the correct description but whatever
-    mlp_bias: bool = False # whether to use bias weights. Llama3 does not and I'm partial to their choice
     mlp_nonlinearity: str = 'SiLU' # options are 'GeLU', 'SiLU', and 'ReLU'(not recommended)
     mlp_gated: bool = True # Turns SiLU into SwiGLU, GeLU into GeGLU, etc
     # ^ if gated == True, mlp_hidden_mult will automatically adjust to maintain parameter count

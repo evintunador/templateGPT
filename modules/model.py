@@ -49,6 +49,24 @@ class Model(LoggingModule):
 
         self.criterion = nn.CrossEntropyLoss(ignore_index = self.vocab_len - 1) # ignore the padding token
 
+        # init params
+        self.apply(self.__init__weights)
+
+    def __init__weights(self, module):
+        """
+        GPT-2 style parameter initialization for the final linear proj in Attn & MLP Layers
+        The idea is to scale the distribution by the number of layers to ensure that the output variance =1 rather than blowing up
+        """
+        if isinstance(module, nn.Linear):
+            std = 0.02
+            if hasattr(module, 'GPT_scale_init'):
+                std *= (2 * self.num_layers) ** -0.5
+            torch.nn.init.normal_(module.weight, mean=0.0, std=std)
+            if module.bias is not None:
+                torch.nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+
     @log_io
     def forward(
         self, 

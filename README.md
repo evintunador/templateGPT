@@ -64,7 +64,7 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
 ## definite eventual TODOs
 - [ ] incorporate the tons of tiny edits from [FutureFormer](https://github.com/evintunador/FutureFormer)
     - [ ] new MQA that's flexible as either self-attention or cross-attention
-    - [ ] new logging mechanism that understands when you input parameters out of order?
+    - [x] new logging mechanism that understands when you input parameters out of order?
     - [ ] there are likely more
     - [x] instead of the output layer always weight-sharing with the embedding matrix, make the sharing optional
 - [x] fix & enable batched inference
@@ -85,6 +85,8 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
 	- [ ] parameter count printer function built-in
 	- [ ] switch to measuring non-embedding parameters for model comparisons
 	- [ ] look for more
+    - [x] new parameter initialization
+    - [x] make output layer weight-tying to embedding input optional
 - [ ] create `hyperparameter_search.ipynb` that knows to cancel a run if it's going over your available vram usage
     - [ ] add a more complicated (regression?) analysis to `model_comparison.ipynb` to help us analyze the hyperparameter search
 - [ ] setup .py files to be runnable in terminal rather than in the .ipynb files
