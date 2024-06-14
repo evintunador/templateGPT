@@ -16,40 +16,21 @@ class Layer(LoggingModule):
         self.dropout_rate = cfg.dropout_rate
 
         # attention connection
-        self.pre_attn_norm = Norm(
-            cfg.dim, 
-            cfg.norm_type, 
-            cfg.norm_affine, 
-            cfg.norm_bias, 
-            cfg.eps
-        )
+        self.pre_attn_norm = Norm(cfg.dim, cfg.norm_type, cfg.norm_affine, cfg.norm_bias, cfg.eps)
         self.attn = MQA(
             cfg.dim,
             cfg.head_dim,
             cfg.num_q_heads,
             cfg.num_kv_heads,
-            cfg.max_batch_size,
             cfg.max_seq_len,
             cfg.dropout_rate,
             cfg.device
         )
         if self.second_norm: 
-            self.post_attn_norm = Norm(
-                cfg.dim, 
-                cfg.norm_type, 
-                cfg.norm_affine, 
-                cfg.norm_bias, 
-                cfg.eps
-            )
+            self.post_attn_norm = Norm(cfg.dim, cfg.norm_type, cfg.norm_affine, cfg.norm_bias, cfg.eps)
 
         # feedforward connection
-        self.pre_mlp_norm = Norm(
-            cfg.dim, 
-            cfg.norm_type, 
-            cfg.norm_affine, 
-            cfg.norm_bias, 
-            cfg.eps
-        ) 
+        self.pre_mlp_norm = Norm(cfg.dim, cfg.norm_type, cfg.norm_affine, cfg.norm_bias, cfg.eps) 
         # ensures mlp_hidden_mult maintains the same parameter count if gated == true
         mult = cfg.mlp_hidden_mult * 2/3 if cfg.mlp_gated else cfg.mlp_hidden_mult
         self.mlp = MLP(
@@ -62,13 +43,7 @@ class Layer(LoggingModule):
             cfg.dropout_rate
         )
         if self.second_norm: 
-            self.post_mlp_norm = Norm(
-                cfg.dim, 
-                cfg.norm_type, 
-                cfg.norm_affine, 
-                cfg.norm_bias, 
-                cfg.eps
-            )
+            self.post_mlp_norm = Norm(cfg.dim, cfg.norm_type, cfg.norm_affine, cfg.norm_bias, cfg.eps)
 
     @log_io
     def forward(
@@ -77,11 +52,13 @@ class Layer(LoggingModule):
         freqs_cis: torch.Tensor,
         mask: Optional[torch.Tensor],
         cache_len: int = None,
+        kv_cache: dict = None,
         training = False,
     ) -> torch.Tensor:
-        x = x + self.attn_connect(x, freqs_cis, mask, cache_len, training)
+        dx, kv_cache = self.attn_connect(x, freqs_cis, mask, cache_len, kv_cache, training)
+        x = x + dx
         x = x + self.mlp_connect(x, training)
-        return x
+        return x, kv_cache
 
     @log_io
     def attn_connect(
@@ -90,18 +67,13 @@ class Layer(LoggingModule):
         freqs_cis: torch.Tensor, 
         mask: torch.Tensor, 
         cache_len: int, 
+        kv_cache: dict,
         training: bool,
     ) -> torch.Tensor:
-        dx = self.attn(
-            self.pre_attn_norm(x),
-            freqs_cis, 
-            mask, 
-            cache_len,
-            training
-        )
+        dx, kv_cache = self.attn(self.pre_attn_norm(x),freqs_cis,mask,cache_len,kv_cache,training)
         if training: F.dropout(dx, self.dropout_rate)
         if self.second_norm: dx = self.post_attn_norm(dx)
-        return dx
+        return dx, kv_cache
 
     @log_io
     def mlp_connect(self, x: torch.Tensor, training: bool) -> torch.Tensor:
