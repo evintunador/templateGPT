@@ -68,7 +68,7 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
     - [ ] there are likely more
     - [ ] instead of the output layer always weight-sharing with the embedding matrix, make the sharing optional
 - [x] fix & enable batched inference
-    - [ ] update `model_evaluation.ipynb`'s teacher-forcing topk analysis to get more accurate %'s using batches
+    - [x] update `model_evaluation.ipynb`'s teacher-forcing topk analysis to get more accurate %'s using batches
 - [x] build a better tokenizer
     - [ ] train new models with this better tokenizer in `tokenizers/bpe_v2_tinyStories/`
 - [x] make ability to use a different dataset

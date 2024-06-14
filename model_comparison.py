@@ -71,9 +71,9 @@ def calculate_topk_accuracy(logits, targets, k=5, padding_idx=None):
     else:
         return valid_correct.float().mean()
 
-def evaluate_models(models_to_compare: List, topk: int = 5):
+def evaluate_models(models_to_compare: List, topk: int = 5, batch_size: int = 32):
     # Data preparation
-    data_loader = get_data_loader(batch_size = 1, split = 'validation') # batch size can only be 1 until i fix batched inference
+    data_loader = get_data_loader(batch_size = batch_size, split = 'validation')
     text = next(iter(data_loader))
 
     # Evaluate models
@@ -85,38 +85,13 @@ def evaluate_models(models_to_compare: List, topk: int = 5):
         # x and y are tensors shape [batch_size, max_seq_len] of dtype torch.int64
         
         with torch.no_grad():
-            logits, _ = model(x)
+            logits, _ = model(x, cache_len = 0)
     
         topk = 5
         topk_accuracy = calculate_topk_accuracy(logits, y, k = topk, padding_idx = cfg.vocab_len - 1)
         topk_indices = torch.topk(logits, topk, dim=2).indices
         
         # Store results
-        results[model_name] = {
-            'accuracy': topk_accuracy.item(),
-            'topk_indices': topk_indices,
-            'tokenizer': tokenizer
-        }
+        results[model_name] = topk_accuracy.item()
 
-    return results, y
-
-# Define a function to format the model output
-def format_model_output(model_name, data, topk, tokenizer, correct_data):
-    print(f"Model: {model_name}")
-    print(f"  - Top-{topk} Accuracy: {data['accuracy']*100:.2f}%")
-    
-    # Extract the topk indices from the results
-    topk_indices = data['topk_indices']
-    
-    # Assuming `y` is accessible here as the true targets or passed similarly to tokenizer
-    batch_size, seq_len = topk_indices.shape[:2]
-    
-    # Display comparisons
-    print('True\tPredicted')
-    for j in range(25):
-        true_token = tokenizer.expand_token(correct_data[0, j].item())  # Get the true token
-        predicted_tokens = [tokenizer.expand_token(idx) for idx in topk_indices[0, j]]  # List of predicted tokens
-            
-        # Display true and predicted tokens
-        print(f"{true_token}\t{predicted_tokens}")
-    print()
+    return results
