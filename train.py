@@ -72,6 +72,9 @@ def train(
     
     # Enable anomaly detection. useful for really deep issues in the model where the gradient breaks
     if detect_anomoly: torch.autograd.set_detect_anomaly(True)
+
+    # this provides some free performance assuming your GPU supports it
+    torch.set_float32_matmul_precision('high')
     
     start_time = time.time()
     
@@ -82,7 +85,8 @@ def train(
         x,y = torcherize_batch(tokenizer, batch, cfg.max_seq_len, cfg.device)
         
         # train
-        logits, loss = model(x, target_token_ids=y)
+        with torch.autocast(device_type = cfg.device, dtype = torch.bfloat16): # enables mixed-precision training
+            logits, loss = model(x, target_token_ids=y)
         optimizer.zero_grad(set_to_none=True)
         loss.backward() # find the gradients
         optimizer.step() # edit parameters
