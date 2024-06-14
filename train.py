@@ -88,8 +88,12 @@ def train(
         with torch.autocast(device_type = cfg.device, dtype = torch.bfloat16): # enables mixed-precision training
             logits, loss = model(x, target_token_ids=y)
         optimizer.zero_grad(set_to_none=True)
-        loss.backward() # find the gradients
-        optimizer.step() # edit parameters
+        # find the gradients
+        loss.backward()
+        # clip the gradients
+        norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        # edit parameters
+        optimizer.step()
         
         # every once in a while evaluate the loss on train and val sets
         if (i % tcfg.eval_interval) == 0 or (i == tcfg.max_iters - 1):
@@ -106,12 +110,13 @@ def train(
                 losses['train'].mean().item(),
                 losses['val'].mean().item(),
                 torch.exp(losses['val']).mean().item(),
+                norm,
                 elapsed_time,
             ])
             print(
                 f"step {i:04d}: lr {current_lr:.6f}, train loss {losses['train'].mean().item():.4f}, "
                 f"val loss {losses['val'].mean().item():.4f}, ppl {torch.exp(losses['val']).mean().item():.0f}, "
-                f"time elapsed: {elapsed_time:.2f} seconds"
+                f"grad norm {norm:.4f}, time elapsed: {elapsed_time:.2f} seconds"
             )
             
         scheduler.step() # Update the learning rate
