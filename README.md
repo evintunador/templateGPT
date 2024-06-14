@@ -31,12 +31,12 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
     - `mqa.py`: [multi-query attention](https://arxiv.org/abs/1911.02150) with pre-computed [rotary positional encodings](https://arxiv.org/abs/2104.09864)
     - `norm.py`: a norm module with an optional affine layer that allows you to switch between [RMSNorm](https://arxiv.org/abs/1910.07467), [LayerNorm](https://pytorch.org/docs/stable/generated/torch.nn.LayerNorm.html) and [CosineNorm](https://arxiv.org/pdf/1702.05870) easily using a setting over in `config.py`. Adding different normalization methods is also absurdly easy
 - `tokenizers/`: a folder where you store your tokenizers
-    - `bpe_v1/`: a [byte-pair encoding](https://huggingface.co/learn/nlp-course/chapter6/5) tokenizer except I use the characters that show up in TinyStories instead of bytes. This is the one that gets used in all the models that are currently trained, but if you're training a new model and don't care about comparing it against the pre-existing ones then I recommend using `bpe_v2/`
+    - `bpe_v1_tinyStories/`: a [byte-pair encoding](https://huggingface.co/learn/nlp-course/chapter6/5) tokenizer except I use the characters that show up in TinyStories instead of bytes. This is the one that gets used in all the models that are currently trained, but if you're training a new model and don't care about comparing it against the pre-existing ones then I recommend using `bpe_v2_tinyStories/`
         - `build.ipynb`: the notebook where i built my bpe tokenizers. My pairing rules could certainly be improved upon
         - `tokenizer.py`: an overly-simplistic and annoyingly inefficient tokenizer with bos & eos tokens, post-sequence padding, and a `display` function to help you visualize how a given string is broken down
         - `models/`
             - `{95, 128, 256, 512, 1024, 2048, 4096, 8192}.model`: different tokenizer sizes, each a subset of the next. the 95 one is character-wise tokenization
-    - `bpe_v2`: a slightly updated version of the one above that uses GPT4's regex instead of my own shitty from-scratch rules. Not currently implemented in any models
+    - `bpe_v2_tinyStories/`: a slightly updated version of the one above that uses GPT4's regex instead of my own shitty from-scratch rules. Not currently implemented in any models
         - `...`
 - `trained/`
     - `customGPT_1m_{short_and_thicc, 5ft11_and_skinnyfat, tall_and_skinny}/`: a series of 1m parameter models designed to be compared against one another in terms of number of layers, MLP width, and number of attention heads. they're not large enough to get intelligible output
@@ -70,7 +70,11 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
 - [x] fix & enable batched inference
     - [ ] update `model_evaluation.ipynb`'s teacher-forcing topk analysis to get more accurate %'s using batches
 - [x] build a better tokenizer
-    - [ ] train new models with this better tokenizer in `tokenizers/bpe_v2/`
+    - [ ] train new models with this better tokenizer in `tokenizers/bpe_v2_tinyStories/`
+- [x] make ability to use a different dataset
+	- [ ] make dataset format more flexible
+		- [ ] auto train-val split if there's not already one
+		- [ ] auto pick the column of interest from datasets with unnecessary extra columns
 - [ ] go back and make sure model checkpointing is working. at one point it was but i've changed so much since then and haven't bothered using it so i'd bet it's broken
 - [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the stories are shorter than the model's maximum context length
 - [ ] switch to comparing models according to their non-embedding parameters instead of total parameters

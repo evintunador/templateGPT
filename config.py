@@ -15,8 +15,10 @@ class ModelConfig:
     dropout_rate = 0.1 # percent of neurons to set to 0 during training as a way of adding randomness & improving generalization
 
     # tokenizer
-    tokenizer: str = 'bpe_v2' # must choose from one of the folders in 'tokenizers/'. current options: 'bpe_v1', 'bpe_v2'
-    vocab_len: int = 128 # options assuming 'bpe' are 95 (character-wise), 128, 256, 512, 1024, 2048, 4096, & 8192
+    tokenizer: str = 'bpe_v2_tinyStories' # must choose from one of the folders in 'tokenizers/'
+        # current options: 'bpe_v1_tinyStories' & 'bpe_v2_tinyStories'
+        # note: it is possible to train a model on a dataset different from what your tokenizer was trained on
+    vocab_len: int = 128 # options assuming 'bpe_vN_tinyStories' are 95 (character-wise), 128, 256, 512, 1024, 2048, 4096, & 8192
     # ^ that number does not include the three tokens bos, eos, and pad
 
     # Residual Layers
@@ -51,9 +53,21 @@ class TrainConfig:
     """
     # name of the folder the model will be saved into
     model_name = f'{time.strftime("%Y-%m-%d|%H-%M-%S")}' # defaults to the time that config.py was imported
+
+    # your HuggingFace training dataset *VERY FINICKY*
+    dataset = 'noanabeshima/TinyStoriesV2' # noanabeshima's version is higher quality than the original
+        # note: this will affect both the dataset used to train the model in train.ipynb
+        #       AND the dataset used to train your tokenizer in tokenizers/<tokenizer_name_here>/build.ipynb
+        #       BUT ONLY IF you go back & re-train that new tokenizer
+        #       otherwise you might be using a model trained on a different dataset from what your tokenizer was trained on
+        # note: this is only designed to work with datasets structured the same as 'noanabeshima/TinyStoriesV2'
+        #       which means no prompts or labels or columns or anything, just raw text
+        #       an example of one that should work is 'nampdn-ai/tiny-strange-textbooks' 
+        #           however it actually doesn't have a built-in validation set separation so i guess you'd have to manually make one
+        #       something like 'allenai/c4' would also require messing with my code a bit since you don't want the "timestamp" and "url" columns
     
     weight_decay: float = 0.05
-    batch_size: int = 24
+    batch_size: int = 32
     
     # total number of batches to run over the course of training
     max_iters: int = 10#6_000 # i recommend at least 1_000

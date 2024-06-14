@@ -5,11 +5,13 @@ import torch
 ###########################################################
 from torch.utils.data import Dataset, DataLoader
 from datasets import load_dataset
+from config import TrainConfig
+tcfg = TrainConfig()
 
-class TinyStoriesDataset(Dataset):
+class CustomDataset(Dataset):
     def __init__(self, split):
         # Load the dataset
-        self.dataset = load_dataset("noanabeshima/TinyStoriesV2", split=split)
+        self.dataset = load_dataset(tcfg.dataset, split=split)
         
     def __len__(self):
         # Return the size of the dataset
@@ -21,14 +23,14 @@ class TinyStoriesDataset(Dataset):
 
 def get_data_loader(batch_size=32, shuffle=True, split='train', num_workers=0):
     # Create the dataset
-    dataset = TinyStoriesDataset(split)
+    dataset = CustomDataset(split)
     # Create the DataLoader
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
 
 def torcherize_batch(
     tokenizer, 
     batch, 
-    max_seq_len = 512, 
+    max_seq_len: int = 512, 
     device: str = 'cuda' if torch.cuda.is_available() else 'cpu'
 ) -> (torch.Tensor, torch.Tensor):
     b = torch.zeros(len(batch), max_seq_len+1)
@@ -39,25 +41,6 @@ def torcherize_batch(
         )
     x, y = b[:,:max_seq_len], b[:, 1:]
     return x.to(torch.long), y.to(torch.long)
-
-# this might be a faster alternative but idk how it works (other than "threads") and i couldn't measure a noticeable performance improvement
-#from concurrent.futures import ThreadPoolExecutor
-#def torcherize_batch(tokenizer, batch, max_seq_len=512, device: str = 'cuda' if torch.cuda.is_available() else 'cpu'):
-#    with ThreadPoolExecutor() as executor:
-#        # Encode each text in parallel using ThreadPoolExecutor
-#        encoded_batch = list(executor.map(
-#            lambda text: tokenizer.encode(text, bos=True, eos=True, pad=max_seq_len + 1), 
-#            batch
-#        ))
-
-#    # Create the torch tensor from the encoded batch
-#    b = torch.tensor(encoded_batch, device=device)
-#
-#    # Extract input (x) and target (y) sequences
-#    x, y = b[:, :max_seq_len], b[:, 1:]
-#
-#    # Ensure data types are correct
-#    return x.to(torch.long), y.to(torch.long)
 
 ###########################################################
 ###################### DYNAMIC IMPORTING ##################

@@ -97,7 +97,7 @@ def get_tokenizer(size: int = 8192):
     """
     bpe sizes include 95, 128, 256, 512, 1024, 2048, 4096, 8192
     """
-    path = f'tokenizers/bpe_v2/models/{size}.model'
+    path = f'tokenizers/bpe_v1_tinyStories/models/{size}.model'
     tokenizer_data = load_tokenizer_data(path)
     loaded_stoi = tokenizer_data['stoi']
     loaded_merges = tokenizer_data['merges']
