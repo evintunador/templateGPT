@@ -158,8 +158,8 @@ def train(
             loss.backward()
             
         # clip the gradients
-        #if tcfg.grad_clip != 0.0: # TODO: un-comment this in the next commit to make clipping grad norm optional
-        norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)#tcfg.grad_clip
+        if tcfg.grad_clip is not None:
+            norm = torch.nn.utils.clip_grad_norm_(model.parameters(), tcfg.grad_clip)
         
         # update parameters
         optimizer.step()

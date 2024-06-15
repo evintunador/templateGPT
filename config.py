@@ -76,7 +76,7 @@ class TrainConfig:
 
     ### training length
     # total number of batches to run over the course of training
-    max_iters: int = 100#6_000 # i recommend at least 1_000
+    max_iters: int = 20#6_000 # i recommend at least 1_000
     # how often to print out an update on how training is going
     eval_interval: int = 5#max_iters // 100 # doing this too often slows things down hella but also gives detailed log data
     # how many samples to take at each evaluation. more means a more accurate loss/perplexity calculation
@@ -84,11 +84,12 @@ class TrainConfig:
     # how often to save a model checkpoint
     checkpoint_interval: int = None # eval_interval # set to None if you don't want to save checkpoints
 
-    ### AdamW Hyperparameters
+    ### AdamW Hyperparameters https://pytorch.org/docs/stable/generated/torch.optim.AdamW.html
     beta1: float = 0.9
     beta2: float = 0.95
     epsilon: float = 1e-8
     weight_decay: float = 0.05
+    grad_clip: float = 1.0 # this one's not actually part of AdamW but it feels at home here
     
     ### Learning Rate Schedule
         # to visualize the learning rate schedule, see cell 7 of training.ipynb
