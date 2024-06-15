@@ -90,7 +90,7 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
 	- [x] mixed precision training
 	- [x] optional torch.compile
 	- [x] adamw betas in config
-    - [ ] prevent weight decay on Norm affine
+    - [x] prevent weight decay on Norm affine params
 	- [ ] look for more
 - [ ] create `hyperparameter_search.ipynb` that knows to cancel a run if it's going over your available vram usage
     - [ ] add a more complicated (regression?) analysis to `model_comparison.ipynb` to help us analyze the hyperparameter search
