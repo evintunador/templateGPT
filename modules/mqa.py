@@ -130,7 +130,6 @@ class MQA(LoggingModule): # multi-query self-attention https://arxiv.org/abs/191
     
     @log_io
     def calc_output(self, logits: torch.Tensor, values: torch.Tensor, training: bool) -> torch.Tensor:
-        batch_size, _, seq_len, _ = logits.shape
         scores = F.softmax(logits, dim=-1)
         if training: scores = F.dropout(scores, self.dropout_rate)
         return scores @ values # (batch_size, n_heads, seq_len, head_dim)

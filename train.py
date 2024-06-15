@@ -1,5 +1,4 @@
 import torch
-from tqdm import tqdm
 import inspect
 
 from tools import torcherize_batch, save_model
@@ -81,7 +80,7 @@ def get_optimizer(model, tcfg):
     fused_available = 'fused' in inspect.signature(torch.optim.AdamW).parameters
     use_fused = fused_available and model.device == 'cuda' # only uses fused if the device is cuda
     extra_args = dict(fused=True) if use_fused else dict()
-    optimizer = torch.optim.AdamW(optim_groups, lr = tcfg.lr_max, betas = (tcfg.beta1, tcfg.beta2), eps = tcfg.epsilon)
+    optimizer = torch.optim.AdamW(optim_groups, lr = tcfg.lr_init, betas = (tcfg.beta1, tcfg.beta2), eps = tcfg.epsilon)
     print(f"using fused AdamW: {use_fused}")
 
     return optimizer
@@ -112,51 +111,62 @@ def train(
 
     # this provides some free performance assuming your GPU supports it
     torch.set_float32_matmul_precision('high')
+
+    # initializing variable(s) that are referenced before assignment
+    norm = 0.0
     
     start_time = time.time()
-    
-    for i in tqdm(range(tcfg.max_iters)):
-    
-        # sample a batch of data
-        batch = next(iter(train_data_loader))
-        x,y = torcherize_batch(tokenizer, batch, cfg.max_seq_len, cfg.device)
-        
-        # train
-        with torch.autocast(device_type = cfg.device, dtype = torch.bfloat16): # enables mixed-precision training
-            logits, loss = model(x, target_token_ids=y)
-        optimizer.zero_grad(set_to_none=True)
-        # find the gradients
-        loss.backward()
-        # clip the gradients
-        norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-        # edit parameters
-        optimizer.step()
-        
+    for i in range(tcfg.max_iters):
+
         # every once in a while evaluate the loss on train and val sets
         if (i % tcfg.eval_interval) == 0 or (i == tcfg.max_iters - 1):
             elapsed_time = time.time() - start_time
-            losses = estimate_loss(model, tokenizer, train_data_loader, test_data_loader, eval_samples = tcfg.eval_samples)
             current_lr = optimizer.param_groups[0]['lr']
-            if current_lr is torch.Tensor:
-                current_lr = current_lr.item()
+            if current_lr is torch.Tensor: current_lr = current_lr.item()
+
+            # estimate loss
+            losses = estimate_loss(model, tokenizer, train_data_loader, test_data_loader, eval_samples = tcfg.eval_samples)
             
             # Collect data for CSV & print it
             log_data.append([
-                i,
-                current_lr,
-                losses['train'].mean().item(),
-                losses['val'].mean().item(),
-                torch.exp(losses['val']).mean().item(),
-                norm,
-                elapsed_time,
+                i, elapsed_time,
+                losses['train'].mean().item(), losses['val'].mean().item(), torch.exp(losses['val']).mean().item(),
+                current_lr, norm
             ])
             print(
-                f"step {i:04d}: lr {current_lr:.6f}, train loss {losses['train'].mean().item():.4f}, "
-                f"val loss {losses['val'].mean().item():.4f}, ppl {torch.exp(losses['val']).mean().item():.0f}, "
-                f"grad norm {norm:.4f}, time elapsed: {elapsed_time:.2f} seconds"
+                f"step: {i:04d}, time elapsed: {elapsed_time:.2f}s, "
+                f"train loss: {losses['train'].mean().item():.4f}, val loss: {losses['val'].mean().item():.4f}, "
+                f"ppl: {torch.exp(losses['val']).mean().item():.0f}, lr: {current_lr:.6f}, grad norm: {norm:.4f}"
             )
+
+        # setup for training
+        model.train()
+        optimizer.zero_grad()
+        loss_accum = 0.0
+        
+        # we can simulate a larget batch size by accumulating gradients over many micro batches
+        for micro_step in range(tcfg.grad_accum_steps):
+            # sample a batch of data
+            batch = next(iter(train_data_loader))
+            x,y = torcherize_batch(tokenizer, batch, cfg.max_seq_len, cfg.device)
+        
+            # calc micro batch gradient
+            with torch.autocast(device_type = cfg.device, dtype = torch.bfloat16): # enables mixed-precision training
+                logits, loss = model(x, target_token_ids=y)
+            loss = loss / tcfg.grad_accum_steps
+            loss_accum += loss.detach()
+            loss.backward()
             
-        scheduler.step() # Update the learning rate
+        # clip the gradients
+        #if tcfg.grad_clip != 0.0: # TODO: un-comment this in the next commit to make clipping grad norm optional
+        norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)#tcfg.grad_clip
+        
+        # update parameters
+        optimizer.step()
+        # wait for the GPU to finish work
+        if model.device == 'cuda': torch.cuda.synchronize() 
+        # Update the learning rate  
+        scheduler.step() 
         
         # every once in awhile save a checkpoint of the model
         if tcfg.checkpoint_interval is not None:

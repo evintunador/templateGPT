@@ -55,7 +55,7 @@ class TrainConfig:
     # name of the folder the model will be saved into
     model_name = f'{time.strftime("%Y-%m-%d|%H-%M-%S")}' # defaults to the time that config.py was imported
 
-    # your HuggingFace training dataset *VERY FINICKY*
+    # your HuggingFace training dataset *WARNING: VERY FINICKY*
     dataset = 'noanabeshima/TinyStoriesV2' # noanabeshima's version is higher quality than the original
         # note: this will affect both the dataset used to train the model in train.ipynb
         #       AND the dataset used to train your tokenizer in tokenizers/<tokenizer_name_here>/build.ipynb
@@ -67,41 +67,47 @@ class TrainConfig:
         #           however it actually doesn't have a built-in validation set separation so i guess you'd have to manually make one
         #       something like 'allenai/c4' would also require messing with my code a bit since you don't want the "timestamp" and "url" columns
     
-    weight_decay: float = 0.05
-    batch_size: int = 32
-    
+    ### batch size hyperparams
+    # micro_batch_size * grad_accum_steps = effective batch size
+    # micro_batch_size * grad_accum_steps * max_seq_len = total number of tokens per batch
+    micro_batch_size: int = 8
+    grad_accum_steps: int = 16
+        # set grad_accum_steps = 1 to not do gradient accumulation
+
+    ### training length
     # total number of batches to run over the course of training
-    max_iters: int = 10#6_000 # i recommend at least 1_000
+    max_iters: int = 100#6_000 # i recommend at least 1_000
     # how often to print out an update on how training is going
-    eval_interval: int = 2#max_iters // 100 # doing this too often slows things down hella but also gives detailed log data
+    eval_interval: int = 5#max_iters // 100 # doing this too often slows things down hella but also gives detailed log data
     # how many samples to take at each evaluation. more means a more accurate loss/perplexity calculation
     eval_samples: int = 1 # this number can slow things down. each sample is almost like doing an extra training iteration
     # how often to save a model checkpoint
-    checkpoint_interval: int = None # eval_interval # set to None if you don't want checkpoints
+    checkpoint_interval: int = None # eval_interval # set to None if you don't want to save checkpoints
 
-    # AdamW Hyperparameters
+    ### AdamW Hyperparameters
     beta1: float = 0.9
     beta2: float = 0.95
     epsilon: float = 1e-8
+    weight_decay: float = 0.05
     
-    ### to visualize the learning rate schedule you define here, see cell 7 of training.ipynb
-
+    ### Learning Rate Schedule
+        # to visualize the learning rate schedule, see cell 7 of training.ipynb
     # Initial learning rate to start from during the warmup
-    lr_init: float = 1e-6
+    lr_init: float = 1e-4
     # Maximum and minimum learning rates during annealing
     lr_max: float = 1e-1
-    lr_min: float = 1e-3
-    # if you'd like a flat learning rate, set lr_init = lr_min = lr_max and ignore the variables below
+    lr_min: float = 1e-2
+        # if you'd like a flat learning rate, set lr_init = lr_min = lr_max and ignore the variables below
     
     # number of iterations for a linear warmup from lr_min to lr_max
-    warmup_iters: int = int(max_iters * 0.01) # if you don't want to use a lr warmup, set = 0
+    warmup_iters: int = int(max_iters * 0.1) # if you don't want to use a lr warmup, set = 0
     # number of iterations for a constant learning rate of lr_min at the end of training
     final_flat_iters: int = int(max_iters * 0.1) # if you don't want to use a final flat lr at the end, set = 0
     
     # type of annealment to use. Annealment is when the learning rate decreases over the course of training
     anneal_type: str = 'cos' # options: 'cos'(recommended) and 'lin'
     # number of times to bring the learning rate back up from lr_min to lr_max in-between the warmup & final flat
-    num_restarts: int = 3 # if you don't want to use warm restarts, set =0 and ignore T_mult
+    num_restarts: int = 0 # if you don't want to use warm restarts, set =0 and ignore T_mult
     # relative length of each warm restart compared to the previous.
     T_mult: int = 2 # =1 makes all restarts the same length, <1 means they get shorter and >1 makes them longer
     
@@ -109,3 +115,6 @@ class TrainConfig:
     def T_0(self): # I DO NOT RECOMMEND EDITING THIS
         middle_section = self.max_iters - self.warmup_iters - self.final_flat_iters
         return middle_section / sum(self.T_mult ** i for i in range(self.num_restarts+1))
+
+    def __post__init(self):
+        assert total_batch_size // micro_batch_size == 0, 'micro batches must add up to total batch size'

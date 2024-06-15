@@ -39,17 +39,11 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
     - `bpe_v2_tinyStories/`: a slightly updated version of the one above that uses GPT4's regex instead of my own shitty from-scratch rules. Not currently implemented in any models
         - `...`
 - `trained/`
-    - `customGPT_1m_{short_and_thicc, 5ft11_and_skinnyfat, tall_and_skinny}/`: a series of 1m parameter models designed to be compared against one another in terms of number of layers, MLP width, and number of attention heads. they're not large enough to get intelligible output
+    - `customGPT_?m_?/`: a series of 1m parameter models designed to be compared against one another in terms of number of layers, MLP width, and number of attention heads. they're not large enough to get intelligible output
         - `model_config.json`: hyperparameters of the model
         - `model.pth`: weights of the model
         - `train_config.json`: hyperparameters of the training loop used
         - `log_data.csv`: a record of loss and a couple other key metrics over the course of training
-    - `customGPT_2m_{RMSNorm, LayerNorm, CosineNorm}`: a series of 2m parameter models designed to be compared against one another in terms of their chosen normalization technique. At this size you start to see a little bit of coherence in terms of repeated objects/characters in the story.
-        - `...`
-    - `customGPT_3m_{GatedMLP, NotGatedMLP}`: a series of 3m parameter models designed to be compared against one another to shed light on whether it's better to use old-fashioned or gated MLPs. I was surprised at how clearly better the gated MLP did
-        - `...`
-    - `customGPT_4m_{GeGLU, SwiGLU}`: a series of 4m parameter models designed to be compared against one another to shed light on which of the two most common activation functions right now are better. Given that Google uses GeGLU, Meta uses SwiGLU, and the industry as a whole hasn't settled on one or the other, it was unsurprising to see these two perform similarly. At this size you start to occasionally see multiple sentences in a row almost making some sense.
-        - `...`
 - `inference.ipynb`: open this notebook if you just want to see the output of one of the models
 - `model_comparison.ipynb`: open this notebook to compare different models against each other. includes loss curve plots and topk teacher-forcing accuracy rate
 - `testing_modules.ipynb`: creates easy printouts that allow you to follow the progression of tensor shapes for demonstration & debugging purposes of all the modules in `model.py`. If you're building new modules for a novel architecture idea you have then this notebook will be of extreme value to you in debugging & visualization
@@ -91,6 +85,7 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
 	- [x] optional torch.compile
 	- [x] adamw betas in config
     - [x] prevent weight decay on Norm affine params
+    - [x] switch to micro batches & gradient accumulation for larger batch sizes
 	- [ ] look for more
 - [ ] create `hyperparameter_search.ipynb` that knows to cancel a run if it's going over your available vram usage
     - [ ] add a more complicated (regression?) analysis to `model_comparison.ipynb` to help us analyze the hyperparameter search
