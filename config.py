@@ -82,6 +82,7 @@ class TrainConfig:
     # AdamW Hyperparameters
     beta1: float = 0.9
     beta2: float = 0.95
+    epsilon: float = 1e-8
     
     ### to visualize the learning rate schedule you define here, see cell 7 of training.ipynb
 
