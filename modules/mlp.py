@@ -39,6 +39,10 @@ class MLP(LoggingModule):
             print(f'nonlinearity {nonlinearity} not found. defaulting to SiLU')
         else:
             self.nonlinearity = self.nonlinearities[nonlinearity]
+
+    def get_num_params(self):
+        """ Return the number of parameters in the module """
+        return sum(p.numel() for p in self.parameters())
         
     @log_io
     def forward(self, x: torch.Tensor, training: bool = False) -> torch.Tensor:

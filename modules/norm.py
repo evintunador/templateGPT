@@ -38,6 +38,10 @@ class Norm(LoggingModule):
             print(f'norm type {norm_type} not found. defaulting to RMSNorm')
             self.norm_type = "RMSNorm"
 
+    def get_num_params(self):
+        """ Return the number of parameters in the module """
+        return sum(p.numel() for p in self.parameters())
+
     @log_io
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.norm_methods[self.norm_type](x)

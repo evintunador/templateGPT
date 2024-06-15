@@ -163,6 +163,7 @@ def load_model(
     path = f'{model_name}/model.pth'
     model.load_state_dict(torch.load(path)) 
     
-    print(f'{sum(p.numel() for p in model.parameters())/1e3}K parameters\n{cfg}\n{model}')
+    print("number of parameters: %.2fM" % (model.get_num_params()/1e6,))
+    print(model)
 
     return model, tokenizer, cfg

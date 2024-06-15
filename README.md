@@ -65,8 +65,8 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
 - [ ] incorporate the tons of tiny edits from [FutureFormer](https://github.com/evintunador/FutureFormer)
     - [ ] new MQA that's flexible as either self-attention or cross-attention
     - [x] new logging mechanism that understands when you input parameters out of order?
-    - [ ] there are likely more
     - [x] instead of the output layer always weight-sharing with the embedding matrix, make the sharing optional
+    - [ ] there are likely more
 - [x] fix & enable batched inference
     - [x] update `model_evaluation.ipynb`'s teacher-forcing topk analysis to get more accurate %'s using batches
 - [x] build a better tokenizer
@@ -81,12 +81,17 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
 
 ### potential future TODOs
 - [ ] add random useful stuff from karpathy's nanoGPT
-	- [ ] flash-attention option on cuda
-	- [ ] parameter count printer function built-in
-	- [ ] switch to measuring non-embedding parameters for model comparisons
-	- [ ] look for more
+	- [x] flash-attention option on cuda
+	- [x] parameter count printer function built-in
+	- [x] switch to measuring non-embedding parameters for model comparisons
     - [x] new parameter initialization
     - [x] make output layer weight-tying to embedding input optional
+	- [x] TF32 for free performance improvement
+	- [x] mixed precision training
+	- [x] optional torch.compile
+	- [x] adamw betas in config
+    - [ ] prevent weight decay on Norm affine
+	- [ ] look for more
 - [ ] create `hyperparameter_search.ipynb` that knows to cancel a run if it's going over your available vram usage
     - [ ] add a more complicated (regression?) analysis to `model_comparison.ipynb` to help us analyze the hyperparameter search
 - [ ] setup .py files to be runnable in terminal rather than in the .ipynb files

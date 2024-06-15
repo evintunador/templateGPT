@@ -46,6 +46,10 @@ class Layer(LoggingModule):
         if self.second_norm: 
             self.post_mlp_norm = Norm(cfg.dim, cfg.norm_type, cfg.norm_affine, cfg.norm_bias, cfg.eps)
 
+    def get_num_params(self):
+        """ Return the number of parameters in the module """
+        return sum(p.numel() for p in self.parameters())
+
     @log_io
     def forward(
         self,

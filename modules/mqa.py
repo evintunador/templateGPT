@@ -40,6 +40,10 @@ class MQA(LoggingModule): # multi-query self-attention https://arxiv.org/abs/191
         
         # this flag designates Wo to have a different parameter initialization as defined in model.py
         self.Wo.GPT_scale_init = 1
+
+    def get_num_params(self):
+        """ Return the number of parameters in the module """
+        return sum(p.numel() for p in self.parameters())
     
     @log_io
     def forward(

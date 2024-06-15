@@ -27,14 +27,13 @@ class Model(LoggingModule):
         self.scale = cfg.dim ** 0.5 if cfg.scale_first_resid else 1.0
         
         self.layers = nn.ModuleList(Layer(cfg) for _ in range(cfg.num_layers))
-        self.final_norm = Norm(
-            cfg.dim, 
-            cfg.norm_type, 
-            cfg.norm_affine, 
-            cfg.norm_bias, 
-            cfg.eps
-        )
+
+        # the output projection
+        self.final_norm = Norm(cfg.dim, cfg.norm_type, cfg.norm_affine, cfg.norm_bias, cfg.eps)
         self.output = nn.Linear(cfg.dim, self.vocab_len, bias=False)
+
+        # optionally making the output linear layer tie weights to the input embedding matrix
+        self.out_weight_share = cfg.out_weight_share
         if cfg.out_weight_share: self.token_embedder.weight = self.output.weight
 
         freqs_cis = precompute_freqs_cis(
@@ -69,6 +68,16 @@ class Model(LoggingModule):
                 torch.nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+
+    def get_num_params(self, non_embedding=True):
+        """
+        Return the number of parameters in the model.
+        The token embeddings get subtracted unless weight tying to the output layer is enabled
+        """
+        n_params = sum(p.numel() for p in self.parameters())
+        if non_embedding & (self.out_weight_share == False):
+            n_params -= self.transformer.wpe.weight.numel()
+        return n_params
 
     @log_io
     def forward(
