@@ -6,7 +6,7 @@ from typing import Optional
 
 from modules.logging import LoggingModule, log_io
 from modules.norm import Norm
-from modules.mqa import MQA
+from modules.attention import SelfAttention
 from modules.mlp import MLP
 
 class Layer(LoggingModule):
@@ -17,7 +17,7 @@ class Layer(LoggingModule):
 
         # attention connection
         self.pre_attn_norm = Norm(cfg.dim, cfg.norm_type, cfg.norm_affine, cfg.norm_bias, cfg.eps)
-        self.attn = MQA(
+        self.attn = SelfAttention(
             cfg.dim,
             cfg.head_dim,
             cfg.num_q_heads,

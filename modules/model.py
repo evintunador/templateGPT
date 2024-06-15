@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from modules.logging import LoggingModule, log_io
 from modules.norm import Norm
-from modules.mqa import precompute_freqs_cis
+from modules.attention import precompute_freqs_cis
 from modules.layer import Layer
 
 class Model(LoggingModule):

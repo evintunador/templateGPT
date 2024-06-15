@@ -57,7 +57,7 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
 
 ## definite eventual TODOs
 - [ ] incorporate the tons of tiny edits from [FutureFormer](https://github.com/evintunador/FutureFormer)
-    - [ ] new MQA that's flexible as either self-attention or cross-attention
+    - [ ] ~~new MQA that's flexible as either self-attention or cross-attention~~
     - [x] new logging mechanism that understands when you input parameters out of order?
     - [x] instead of the output layer always weight-sharing with the embedding matrix, make the sharing optional
     - [ ] there are likely more
