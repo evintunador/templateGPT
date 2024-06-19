@@ -23,14 +23,14 @@ class Model(LoggingModule):
         self.head_dim = cfg.head_dim 
         self.num_kv_heads = cfg.num_kv_heads
         
-        self.token_embedder = nn.Embedding(self.vocab_len, cfg.dim)
+        self.token_embedder = nn.Embedding(self.vocab_len, cfg.dim, device=cfg.device)
         self.scale = cfg.dim ** 0.5 if cfg.scale_first_resid else 1.0
         
         self.layers = nn.ModuleList(Layer(cfg) for _ in range(cfg.num_layers))
 
         # the output projection
         self.final_norm = Norm(cfg.dim, cfg.norm_type, cfg.norm_affine, cfg.norm_bias, cfg.eps)
-        self.output = nn.Linear(cfg.dim, self.vocab_len, bias=False)
+        self.output = nn.Linear(cfg.dim, self.vocab_len, bias=False, device=cfg.device)
 
         # optionally making the output linear layer tie weights to the input embedding matrix
         self.out_weight_share = cfg.out_weight_share

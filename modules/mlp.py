@@ -14,15 +14,16 @@ class MLP(LoggingModule):
         gated: bool = True,
         bias: bool = False, # i Stan Llama and set bias to false
         dropout_rate: float = 0.1,
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
     ):
         super().__init__()
         self.dropout_rate = dropout_rate
 
         # the up, down, and (optional) gate projections
-        self.Wup = nn.Linear(input_dim, hidden_dim, bias=bias)
+        self.Wup = nn.Linear(input_dim, hidden_dim, bias=bias, device=device)
         self.gated = gated
-        if gated: self.Wgate = nn.Linear(input_dim, hidden_dim, bias=bias)
-        self.Wdown = nn.Linear(hidden_dim, output_dim, bias=bias)
+        if gated: self.Wgate = nn.Linear(input_dim, hidden_dim, bias=bias, device=device)
+        self.Wdown = nn.Linear(hidden_dim, output_dim, bias=bias, device=device)
 
         # this flag designates Wdown to have a different parameter initialization as defined in model.py
         self.Wdown.GPT_scale_init = 1

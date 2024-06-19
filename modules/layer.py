@@ -41,7 +41,8 @@ class Layer(LoggingModule):
             cfg.mlp_nonlinearity,
             cfg.mlp_gated,
             cfg.linear_bias,
-            cfg.dropout_rate
+            cfg.dropout_rate,
+            cfg.device
         )
         if self.second_norm: 
             self.post_mlp_norm = Norm(cfg.dim, cfg.norm_type, cfg.norm_affine, cfg.norm_bias, cfg.eps)

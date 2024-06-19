@@ -41,12 +41,12 @@ class SelfAttention(LoggingModule):
         self.dropout_rate = dropout_rate
         self.device = device
 
-        self.Wq = nn.Linear(dim, num_q_heads * head_dim, bias=bias)
-        self.Wk = nn.Linear(dim, self.num_kv_heads * head_dim, bias=bias)
-        self.Wv = nn.Linear(dim, self.num_kv_heads * head_dim, bias=bias)
+        self.Wq = nn.Linear(dim, num_q_heads * head_dim, bias=bias, device=device)
+        self.Wk = nn.Linear(dim, self.num_kv_heads * head_dim, bias=bias, device=device)
+        self.Wv = nn.Linear(dim, self.num_kv_heads * head_dim, bias=bias, device=device)
             # it would be more efficient to do one Wqkv & then split its output later but I prefer readability
         
-        self.Wo = nn.Linear(num_q_heads * head_dim, dim, bias=bias)
+        self.Wo = nn.Linear(num_q_heads * head_dim, dim, bias=bias, device=device)
         # this flag designates Wo to have a different parameter initialization as defined in model.py
         self.Wo.GPT_scale_init = 1
 
