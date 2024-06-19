@@ -14,10 +14,7 @@ class Model(LoggingModule):
 
         self.num_layers = cfg.num_layers
         self.max_seq_len = cfg.max_seq_len
-        self.vocab_len = cfg.vocab_len + 3 + 125
-            # the 3 is the bos, eos, and padding tokens
-            # the 125 are extra tokens to make the model more efficient at the kernel level
-            #     i should probably fix this at the tokenizer level instead but at this point it's too late & I'm lazy. maybe later
+        self.vocab_len = cfg.vocab_len
 
         # the generate() function in inference.py references these values to build kv cache
         self.head_dim = cfg.head_dim 
@@ -49,7 +46,7 @@ class Model(LoggingModule):
         mask = torch.triu(mask, diagonal=1)
         self.register_buffer('mask', mask)
 
-        self.criterion = nn.CrossEntropyLoss(ignore_index = cfg.vocab_len + 2) # ignore the padding token
+        self.criterion = nn.CrossEntropyLoss(ignore_index = cfg.vocab_len -1) # ignore the padding token
 
         # init params
         self.apply(self.__init__weights)
@@ -103,7 +100,7 @@ class Model(LoggingModule):
         else: # if performing inference
             freqs_cis = self.freqs_cis[cache_len : cache_len + seq_len]
             mask = self.mask[:seq_len, :seq_len]
-            mask = torch.hstack([torch.zeros((seq_len, cache_len), device=self.device), mask])#.type_as(x)
+            mask = torch.hstack([torch.zeros((seq_len, cache_len), device=self.device), mask])# (seq_len, seq_len + cache_len)
             training = False
 
         # initialize first residual state

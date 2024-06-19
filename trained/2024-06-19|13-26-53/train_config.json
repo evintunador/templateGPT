@@ -1,0 +1,1 @@
+{"micro_batch_size": 8, "grad_accum_steps": 16, "max_iters": 10, "eval_interval": 5, "eval_samples": 1, "checkpoint_interval": null, "beta1": 0.9, "beta2": 0.95, "epsilon": 1e-08, "weight_decay": 0.05, "grad_clip": 1.0, "lr_init": 0.0001, "lr_max": 0.1, "lr_min": 0.01, "warmup_iters": 1, "final_flat_iters": 1, "anneal_type": "cos", "num_restarts": 0, "T_mult": 2}

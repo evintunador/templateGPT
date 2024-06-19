@@ -2,7 +2,7 @@
 ## about
 This is the model I edit whenever I want to test a new transformer architecture idea I have. It's designed to be flexible with many large changes being tweakable from the config, easy to demonstrate what's happening in the progression of tensor shapes, and easy to read/edit the code. Feel free to toy around and build off of it, this repo is actually a template
 
-Notice that even though these models are very small (1 to 4m parameters), they are actually reasonable rough proxies for how well a scaled up version may do on real data thanks to our use of the [TinyStories](https://arxiv.org/abs/2305.07759) dataset. According to the original paper, somewhere in the 1 to 3m parameter range, a GPT2-inspired architecture is capable of understanding that the token 'apple' is something that the main character of the tiny story 'Tim' would like to 'eat'; meaning it can actually pick up on the relationships in this text which are an isomorphic subset of the ones that a larger language model would see when training on the entire internet. This basic idea is the backbone behind microsoft's Phi family of models, originally described in the paper [Textbooks Are All You Need](https://arxiv.org/pdf/2306.11644), and how they can perform so well despite being so small. In practice the models you see here don't quite get there because 1) we train with a much smaller batch size, 2) we're using an inferior tokenizer, 3) our context length is shorter is shorter (512 tokens) and 4) likely other discrepancies I've not noticed. In the future I plan to continually improve on all of those points. I hope this repo can be of help to anyone who wants to get into designing & building novel architectures but doesn't have the compute to test a larger model on every single idea they have. I'm literally training these on the CPU of a 2019 iMac with 8gb of ram.
+Notice that even though these models are very small (1 to 4m parameters), they are actually reasonable rough proxies for how well a scaled up version may do on real data thanks to our use of the [TinyStories](https://arxiv.org/abs/2305.07759) dataset. According to the original paper, somewhere in the 1 to 3m parameter range a GPT2-inspired architecture is capable of understanding that the token 'apple' is something that the main character of the tiny story 'Tim' would like to 'eat'; meaning it can actually pick up on the relationships in this text which are an isomorphic subset of the ones that a larger language model would see when training on the entire internet. This basic idea is the backbone behind microsoft's Phi family of models, originally described in the paper [Textbooks Are All You Need](https://arxiv.org/pdf/2306.11644), and how they can perform so well despite being so small. In practice the models you see here don't quite get there because 1) we train with a much smaller batch size, 2) we're using an inferior tokenizer, 3) our context length is shorter is shorter (512 tokens) and 4) likely other discrepancies I've not noticed. In the future I plan to continually improve on all of those points. I hope this repo can be of help to anyone who wants to get into designing & building novel architectures but doesn't have the compute to test a larger model on every single idea they have. I'm literally training these on the CPU of a 2019 iMac with 8gb of ram.
 
 [![ERROR DISPLAYING IMAGE, CLICK HERE FOR VIDEO](https://img.youtube.com/vi/s9kQvDsWnbc/0.jpg)](https://www.youtube.com/watch?v=s9kQvDsWnbc)
 
@@ -31,15 +31,13 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
     - `mqa.py`: [multi-query attention](https://arxiv.org/abs/1911.02150) with pre-computed [rotary positional encodings](https://arxiv.org/abs/2104.09864)
     - `norm.py`: a norm module with an optional affine layer that allows you to switch between [RMSNorm](https://arxiv.org/abs/1910.07467), [LayerNorm](https://pytorch.org/docs/stable/generated/torch.nn.LayerNorm.html) and [CosineNorm](https://arxiv.org/pdf/1702.05870) easily using a setting over in `config.py`. Adding different normalization methods is also absurdly easy
 - `tokenizers/`: a folder where you store your tokenizers
-    - `bpe_v1_tinyStories/`: a [byte-pair encoding](https://huggingface.co/learn/nlp-course/chapter6/5) tokenizer except I use the characters that show up in TinyStories instead of bytes. This is the one that gets used in all the models that are currently trained, but if you're training a new model and don't care about comparing it against the pre-existing ones then I recommend using `bpe_v2_tinyStories/`
-        - `build.ipynb`: the notebook where i built my bpe tokenizers. My pairing rules could certainly be improved upon
-        - `tokenizer.py`: an overly-simplistic and annoyingly inefficient tokenizer with bos & eos tokens, post-sequence padding, and a `display` function to help you visualize how a given string is broken down
+    - `bpe_tinyStories/`: a [byte-pair encoding](https://huggingface.co/learn/nlp-course/chapter6/5) tokenizer trained on tinyStoriesV2
+        - `build.ipynb`: the notebook where i trained the tokenizer models
+        - `tokenizer.py`: an overly-simplistic and annoyingly inefficient tokenizer with bos & eos tokens, post-sequence padding, and a `display` function to help you visualize how a given string is broken down into tokens
         - `models/`
-            - `{95, 128, 256, 512, 1024, 2048, 4096, 8192}.model`: different tokenizer sizes, each a subset of the next. the 95 one is character-wise tokenization
-    - `bpe_v2_tinyStories/`: a slightly updated version of the one above that uses GPT4's regex instead of my own shitty from-scratch rules. Not currently implemented in any models
-        - `...`
+            - `{512, 1024, 2048, 4096, 8192}.model`: different tokenizer sizes, each a subset of the next
 - `trained/`
-    - `customGPT_?m_?/`: a series of 1m parameter models designed to be compared against one another in terms of number of layers, MLP width, and number of attention heads. they're not large enough to get intelligible output
+    - `templateGPT_?m_?/`: a series of yet-to-be-trained models designed to be compared against one another. they're not large enough to get intelligible output
         - `model_config.json`: hyperparameters of the model
         - `model.pth`: weights of the model
         - `train_config.json`: hyperparameters of the training loop used
@@ -51,7 +49,7 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
 - `config.py`: all of the editable model and training settings
 - `inference.py`: functions for performing inference used in multiple `.ipynb` files
 - `model_comparison.py`: functions for comparing models used in `model_comparison.ipynb`
-- `requirements.txt` - I should probably change this to only include the packages that are actually necessary and not be so strict on versions. The command I used to get this list is `pip freeze | grep -v " @ file://" > requirements.txt` and then I deleted the version numbers, lmk if you know of a better method
+- `requirements.txt`: I should probably change this to only include the packages that are actually necessary and not be so strict on versions. The command I used to get this list is `pip freeze | grep -v " @ file://" > requirements.txt` and then I deleted the version numbers, lmk if you know of a better method
 - `tools.py`: A variety of functions & classes that don't fit elsewhere and/or are used by more than one of the jupyter notebooks. I should prolly find a better way to organize these
 - `train.py`: functions for training a model, used in `train.ipynb`
 
@@ -64,14 +62,20 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
 - [x] fix & enable batched inference
     - [x] update `model_evaluation.ipynb`'s teacher-forcing topk analysis to get more accurate %'s using batches
 - [x] build a better tokenizer
-    - [ ] train new models with this better tokenizer in `tokenizers/bpe_v2_tinyStories/`
+	- [x] switch from character-pair-encoding to byte-pair encoding
+	- [x] switch to an efficient tensor length by accounting for the extra three tokens
+    - [ ] train new models
+- [ ] fix lr bug where it displays smaller than it actually is
 - [x] make ability to use a different dataset
 	- [ ] make dataset format more flexible
 		- [ ] auto train-val split if there's not already one
 		- [ ] auto pick the column of interest from datasets with unnecessary extra columns
 - [ ] go back and make sure model checkpointing is working. at one point it was but i've changed so much since then and haven't bothered using it so i'd bet it's broken
-- [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the stories are shorter than the model's maximum context length
-- [ ] switch to comparing models according to their non-embedding parameters instead of total parameters
+- [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the docs are shorter than the model's maximum context length
+    - [ ] mess with dataloader
+    - [ ] pull mask initialization out of model & mess with it to fit multiple docs in one sequence
+- [x] switch to comparing models according to their non-embedding parameters instead of total parameters
+- [ ] add a tokens/sec metric on the training data
 
 ### potential future TODOs
 - [ ] add random useful stuff from karpathy's nanoGPT
@@ -88,25 +92,16 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
     - [x] switch to micro batches & gradient accumulation for larger batch sizes
     - [x] clip gradients
         - [x] make clipping optional
+    - [ ] make it parallelizable on cuda
 	- [ ] look for more
 - [ ] create `hyperparameter_search.ipynb` that knows to cancel a run if it's going over your available vram usage
     - [ ] add a more complicated (regression?) analysis to `model_comparison.ipynb` to help us analyze the hyperparameter search
 - [ ] setup .py files to be runnable in terminal rather than in the .ipynb files
+    - [ ] might do this only for `train.py` and have the parallelization code only be accessible through this
 - [ ] switch to [TinyGrad](https://github.com/tinygrad/tinygrad)? very tempting bc then I could use apple silicon gpu (pytorch currently doesn't support complex numbers, which are used in [rotary positional encodings](https://arxiv.org/abs/2104.09864), on apple silicon) but I feel like it makes more sense to stick with pytorch for public accessibility reasons
 - [ ] add option to continually train pre-existing models & update its training data/hyperparameters accordingly
 - [ ] add automated model comparison analysis by GPT4 like in the [TinyStories](https://arxiv.org/abs/2305.07759) paper into `model_comparison.ipynb`
-- [ ] add sparse/local attention mask options
-- [ ] different architectures/modules to incorporate/add
-    - [ ] Mixture of Experts
-    - [ ] whatever these new RNN-like transformers have going on such as [Gemma 1.1](https://arxiv.org/abs/2402.19427)
-    - [ ] [Mamba](https://arxiv.org/abs/2312.00752) blocks
-- [ ] build an easy way to design blocks in residual layers using lists of strings in the config. for example, the parallel MoE from [Snowflake](https://www.snowflake.com/en/) would be
-```Python
-[
-'Norm->MQA->+->Norm->MLP->+',
-'Norm->MoE->+'
-]
-```
+- [ ] add sparse/local/windowed attention mask options
 
 ## how to contribute
 Other than the above TODO lists, appreciated contributions include:
@@ -120,6 +115,6 @@ Other than the above TODO lists, appreciated contributions include:
 Because I'm not super knowledgeable on how collaborating on git projects works and I tend to edit directly on the main branch, please reach out and communicate with me about any edits you plan to make so that I can avoid editing the same files. [Click here to join my discord server](https://discord.gg/hTYQyDPpr9)
 
 ## check me out
-- guides on how to build miniature versions of popular models from scratch, with a hand-holding walkthrough of every single tensor operation: [minGemma](https://github.com/evintunador/minGemma), [minGrok](https://github.com/evintunador/minGrok), and [minLlama3](https://github.com/evintunador/minLlama3). Future versions of these guides will use this Repo as a template
+- guides on how to build miniature versions of popular models from scratch, with a hand-holding walkthrough of every single tensor operation: [minGemma](https://github.com/evintunador/minGemma), [minGrok](https://github.com/evintunador/minGrok), and [minLlama3](https://github.com/evintunador/minLlama3). Future versions of those kinds of guides I make will use this Repo as a template
 - [my YouTube channel](https://www.youtube.com/@Tunadorable)
 - my [other links](https://linktr.ee/tunadorable)
