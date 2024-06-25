@@ -21,7 +21,7 @@ class ModelConfig:
         # current options: 'bpe_tinyStories', 'bpe_fineweb', 'bpe_fineweb-edu'
         # note: it is possible to train a model on a dataset different from what your tokenizer was trained on
     vocab_len: int = 1024 # options can be found in the `models/` sub-folder inside whatever tokenizer you just chose above^
-        # for `bpe_tinyStories` the options are 512, 1024, 2048, 4096
+        # for `bpe_tinyStories` the options are 512, 1024, 2048
         # for 'bpe_fineWeb' and 'bpe_fineWeb-edu' the options are 512, 1024, 2048, 4096, 8192, 16_384, 32_768, 65,563
 
     # Residual Layers

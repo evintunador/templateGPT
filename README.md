@@ -63,6 +63,9 @@ This repo is part of a larger project of mine called [micro_model_sandbox](https
 - [x] fix lr bug where it displays smaller than it actually is
 - [x] add a tokens/sec metric on the training data
 - [ ] train new tokenizers
+    - [x] tinystoriesv2
+    - [ ] fineweb
+    - [ ] fineweb-edu
 - [ ] train new models
 - [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the docs are shorter than the model's maximum context length
 
