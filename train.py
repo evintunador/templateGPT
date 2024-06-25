@@ -80,7 +80,7 @@ def get_optimizer(model, tcfg):
     fused_available = 'fused' in inspect.signature(torch.optim.AdamW).parameters
     use_fused = fused_available and model.device == 'cuda' # only uses fused if the device is cuda
     extra_args = dict(fused=True) if use_fused else dict()
-    optimizer = torch.optim.AdamW(optim_groups, lr = tcfg.lr_init, betas = (tcfg.beta1, tcfg.beta2), eps = tcfg.epsilon)
+    optimizer = torch.optim.AdamW(optim_groups, lr=1.0, betas=(tcfg.beta1, tcfg.beta2), eps=tcfg.epsilon)
     print(f"using fused AdamW: {use_fused}")
 
     return optimizer
@@ -136,7 +136,7 @@ def train(
             print(
                 f"step: {i:04d}, time elapsed: {elapsed_time:.2f}s, "
                 f"train loss: {losses['train'].mean().item():.4f}, val loss: {losses['val'].mean().item():.4f}, "
-                f"ppl: {torch.exp(losses['val']).mean().item():.0f}, lr: {current_lr:.6f}, grad norm: {norm:.4f}"
+                f"ppl: {torch.exp(losses['val']).mean().item():.0f}, lr: {current_lr:.8f}, grad norm: {norm:.4f}"
             )
 
         # setup for training

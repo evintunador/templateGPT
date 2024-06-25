@@ -8,7 +8,7 @@ Notice that even though these models are very small (1 to 4m parameters), they a
 
 [![ERROR DISPLAYING IMAGE, CLICK HERE FOR VIDEO](https://img.youtube.com/vi/s9kQvDsWnbc/0.jpg)](https://www.youtube.com/watch?v=s9kQvDsWnbc)
 
-This repo is part of a larger project of mine called [micro_model_sandbox]() that's basically a hub for all the novel model experiments I do, with the goal of facilitating easy comparison between the different models. Basically for each of those experiments I just use this very repo as a template to start editing, and then once I'm happy with the project (or if I've just abandoned it but it's moderately functional) I add it to the sandbox. If you end up using this repo as a template, feel free to contribute your project to the sandbox as well!
+This repo is part of a larger project of mine called [micro_model_sandbox](https://github.com/evintunador/micro-GPT-sandbox) that's basically a hub for all the novel model experiments I do, with the goal of facilitating easy comparison between the different models. Basically for each of those experiments I just use this very repo as a template to start editing, and then once I'm happy with the project (or if I've just abandoned it but it's moderately functional) I add it to the sandbox. If you end up using this repo as a template, feel free to contribute your project to the sandbox as well!
 
 ## getting started
 1. clone the repository
@@ -22,7 +22,7 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
 9. If you've trained multiple models, you can compare them in `model_comparison.ipynb` as long as you remember to use the third cell to specify which models you want to compare. It'll look at loss curves over the course of training and teacher-forcing topk accuracy rate
 10. This step could really go anywhere, but if you're trying to learn how transformers work then along with reading the code in `modules/` you can use `test_modules.ipynb` to visualize how the tensor shapes change.
 11. If/when you become confident to mess with the actual code yourself and test out a novel architecture idea you've got, head on over into `modules/` and get to work. While you're doing this, make sure to use `LoggingModule` instead of `nn.module` and put `@log_io` before every class function you make so that you can use `test_modules.ipynb` for easy visualization/debugging. To see an example of one of my novel architecture edits, check out [Fractal-Head Attention]()
-12. If/when you've got a novel transformer architecture edit up and working, send it over to the [micro model sandbox]()!
+12. If/when you've got a novel transformer architecture edit up and working, send it over to the [micro model sandbox](https://github.com/evintunador/micro-GPT-sandbox)!
 
 ## file structure
 - `modules/`: where all of the code for the actual model goes
@@ -60,7 +60,7 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
 - `train.py`: functions for training a model, used in `train.ipynb`
 
 ## definite eventual TODOs
-- [ ] fix lr bug where it displays smaller than it actually is
+- [x] fix lr bug where it displays smaller than it actually is
 - [ ] add a tokens/sec metric on the training data
 - [ ] train new tokenizers
 - [ ] train new models
@@ -105,6 +105,6 @@ Other than the above TODO lists, appreciated contributions include:
 Because I'm not super knowledgeable on how collaborating on git projects works and I tend to edit directly on the main branch, please reach out and communicate with me about any edits you plan to make so that I can avoid editing the same files. [Click here to join my discord server](https://discord.gg/hTYQyDPpr9)
 
 ## check me out
-- guides on how to build miniature versions of popular models from scratch, with a hand-holding walkthrough of every single tensor operation: [minGemma](https://github.com/evintunador/minGemma), [minGrok](https://github.com/evintunador/minGrok), and [minLlama3](https://github.com/evintunador/minLlama3). Future versions of those kinds of guides I make will use this Repo as a template
+- guides on how to build miniature versions of popular models from scratch, with a hand-holding walkthrough of every single tensor operation: [minGemma](https://github.com/evintunador/minGemma), [minGrok](https://github.com/evintunador/minGrok), and [minLlama3](https://github.com/evintunador/minLlama3). Future versions of those kinds of guides I make will use this repo as a template
 - [my YouTube channel](https://www.youtube.com/@Tunadorable)
 - my [other links](https://linktr.ee/tunadorable)

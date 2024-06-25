@@ -75,7 +75,7 @@ class TrainConfig:
     # micro_batch_size * grad_accum_steps = effective batch size
     # micro_batch_size * grad_accum_steps * max_seq_len = total number of tokens per batch
     micro_batch_size: int = 8
-    grad_accum_steps: int = 16
+    grad_accum_steps: int = 1
         # set grad_accum_steps = 1 to not do gradient accumulation
 
     ### training length
@@ -98,10 +98,10 @@ class TrainConfig:
     ### Learning Rate Schedule
         # to visualize the learning rate schedule, see cell 7 of training.ipynb
     # Initial learning rate to start from during the warmup
-    lr_init: float = 1e-4
+    lr_init: float = 1e-6
     # Maximum and minimum learning rates during annealing
     lr_max: float = 1e-1
-    lr_min: float = 1e-2
+    lr_min: float = 1e-3
         # if you'd like a flat learning rate, set lr_init = lr_min = lr_max and ignore the variables below
     
     # number of iterations for a linear warmup from lr_min to lr_max
