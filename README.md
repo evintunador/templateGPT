@@ -32,12 +32,16 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
     - `model.py`: the primary class for our GPT
     - `mqa.py`: [multi-query attention](https://arxiv.org/abs/1911.02150) with pre-computed [rotary positional encodings](https://arxiv.org/abs/2104.09864)
     - `norm.py`: a norm module with an optional affine layer that allows you to switch between [RMSNorm](https://arxiv.org/abs/1910.07467), [LayerNorm](https://pytorch.org/docs/stable/generated/torch.nn.LayerNorm.html) and [CosineNorm](https://arxiv.org/pdf/1702.05870) easily using a setting over in `config.py`. Adding different normalization methods is also absurdly easy
-- `tokenizers/`: a folder where you store your tokenizers
-    - `bpe_tinyStories/`: a [byte-pair encoding](https://huggingface.co/learn/nlp-course/chapter6/5) tokenizer trained on tinyStoriesV2
+- `custom_tokenizers/`: a folder where you store your tokenizers
+    - `bpe_tinyStories/`: a [byte-pair encoding](https://huggingface.co/learn/nlp-course/chapter6/5) tokenizer trained on [tinyStoriesV2](https://huggingface.co/datasets/noanabeshima/TinyStoriesV2)
         - `build.ipynb`: the notebook where i trained the tokenizer models
         - `tokenizer.py`: an overly-simplistic and annoyingly inefficient tokenizer with bos & eos tokens, post-sequence padding, and a `display` function to help you visualize how a given string is broken down into tokens
         - `models/`
-            - `{512, 1024, 2048, 4096, 8192}.model`: different tokenizer sizes, each a subset of the next
+            - `{512, 1024, 2048, 4096}.model`: different tokenizer sizes, each a subset of the next
+    - `bpe_fineweb/`: a [byte-pair encoding](https://huggingface.co/learn/nlp-course/chapter6/5) tokenizer trained on [fineweb](https://huggingface.co/datasets/HuggingFaceFW/fineweb)
+        - ...
+    - `bpe_tinyStories/`: a [byte-pair encoding](https://huggingface.co/learn/nlp-course/chapter6/5) tokenizer trained on [fineweb-edu](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu)
+        - ...
 - `trained/`
     - `templateGPT_?m_?/`: a series of yet-to-be-trained models designed to be compared against one another. they're not large enough to get intelligible output
         - `model_config.json`: hyperparameters of the model
