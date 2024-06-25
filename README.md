@@ -61,7 +61,7 @@ This repo is part of a larger project of mine called [micro_model_sandbox](https
 
 ## definite eventual TODOs
 - [x] fix lr bug where it displays smaller than it actually is
-- [ ] add a tokens/sec metric on the training data
+- [x] add a tokens/sec metric on the training data
 - [ ] train new tokenizers
 - [ ] train new models
 - [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the docs are shorter than the model's maximum context length

@@ -114,30 +114,46 @@ def train(
 
     # initializing variable(s) that are referenced before assignment
     norm = 0.0
-    
+
+    # keeping track of total training time & tokens/sec
+    tokens_per_step = tcfg.micro_batch_size * tcfg.grad_accum_steps * cfg.max_seq_len
+    steps_since_last_eval = 0
+    last_eval_time = time.time()
     start_time = time.time()
+    
     for i in range(tcfg.max_iters):
 
         # every once in a while evaluate the loss on train and val sets
         if (i % tcfg.eval_interval) == 0 or (i == tcfg.max_iters - 1):
-            elapsed_time = time.time() - start_time
+            current_time = time.time()
+            elapsed_time = current_time - start_time
+            eval_elapsed_time = current_time - last_eval_time
+            
             current_lr = optimizer.param_groups[0]['lr']
             if current_lr is torch.Tensor: current_lr = current_lr.item()
 
             # estimate loss
             losses = estimate_loss(model, tokenizer, train_data_loader, test_data_loader, eval_samples = tcfg.eval_samples)
             
+            # Calculate tokens per second
+            total_tokens = tokens_per_step * steps_since_last_eval
+            tokens_per_second = total_tokens / eval_elapsed_time if i > 0 else 0.0
+            
             # Collect data for CSV & print it
             log_data.append([
-                i, elapsed_time,
+                i, elapsed_time, tokens_per_second,
                 losses['train'].mean().item(), losses['val'].mean().item(), torch.exp(losses['val']).mean().item(),
                 current_lr, norm
             ])
             print(
-                f"step: {i:04d}, time elapsed: {elapsed_time:.2f}s, "
+                f"step: {i:04d}, time elapsed: {elapsed_time:.2f}s, tokens/s: {int(tokens_per_second):08d}, "
                 f"train loss: {losses['train'].mean().item():.4f}, val loss: {losses['val'].mean().item():.4f}, "
                 f"ppl: {torch.exp(losses['val']).mean().item():.0f}, lr: {current_lr:.8f}, grad norm: {norm:.4f}"
             )
+            
+            # Reset token count and last eval time
+            steps_since_last_eval = 0
+            last_eval_time = current_time
 
         # setup for training
         model.train()
@@ -167,6 +183,8 @@ def train(
         if model.device == 'cuda': torch.cuda.synchronize() 
         # Update the learning rate  
         scheduler.step() 
+        
+        steps_since_last_eval += 1
         
         # every once in awhile save a checkpoint of the model
         if tcfg.checkpoint_interval is not None:

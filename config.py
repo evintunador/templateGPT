@@ -75,12 +75,12 @@ class TrainConfig:
     # micro_batch_size * grad_accum_steps = effective batch size
     # micro_batch_size * grad_accum_steps * max_seq_len = total number of tokens per batch
     micro_batch_size: int = 8
-    grad_accum_steps: int = 1
+    grad_accum_steps: int = 2
         # set grad_accum_steps = 1 to not do gradient accumulation
 
     ### training length
     # total number of batches to run over the course of training
-    max_iters: int = 10#6_000 # i recommend at least 1_000
+    max_iters: int = 100#6_000 # i recommend at least 1_000
     # how often to print out an update on how training is going
     eval_interval: int = 5#max_iters // 100 # doing this too often slows things down hella but also gives detailed log data
     # how many samples to take at each evaluation. more means a more accurate loss/perplexity calculation
