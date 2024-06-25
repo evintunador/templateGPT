@@ -18,10 +18,11 @@ class ModelConfig:
 
     # tokenizer
     tokenizer: str = 'bpe_tinyStories' # must choose from one of the folders in 'tokenizers/'
-        # current options: 'bpe_tinyStories'
+        # current options: 'bpe_tinyStories', 'bpe_fineweb', 'bpe_fineweb-edu'
         # note: it is possible to train a model on a dataset different from what your tokenizer was trained on
-    vocab_len: int = 512 # options can be found in the `models/` folder inside whatever tokenizer you just chose above^
-        # for `bpe_tinyStories` the options are 512, 1024, 2048, 4096, 8192
+    vocab_len: int = 1024 # options can be found in the `models/` sub-folder inside whatever tokenizer you just chose above^
+        # for `bpe_tinyStories` the options are 512, 1024, 2048, 4096
+        # for 'bpe_fineWeb' and 'bpe_fineWeb-edu' the options are 512, 1024, 2048, 4096, 8192, 16_384, 32_768, 65,563
 
     # Residual Layers
     num_layers: int = 2 # small models should err on the side of many many layers at the expense of attention & mlp sizes
@@ -53,19 +54,22 @@ class TrainConfig:
     Design your training loop here
     """
     # name of the folder the model will be saved into
-    model_name = f'{time.strftime("%Y-%m-%d|%H-%M-%S")}' # defaults to the time that config.py was imported
+    model_name: str = f'{time.strftime("%Y-%m-%d|%H-%M-%S")}' # defaults to the time that config.py was imported
 
-    # your HuggingFace training dataset *WARNING: VERY FINICKY*
-    dataset = 'noanabeshima/TinyStoriesV2' # noanabeshima's version is higher quality than the original
-        # note: this will affect both the dataset used to train the model in train.ipynb
-        #       AND the dataset used to train your tokenizer in tokenizers/<tokenizer_name_here>/build.ipynb
-        #       BUT ONLY IF you go back & re-train that new tokenizer
-        #       otherwise you might be using a model trained on a different dataset from what your tokenizer was trained on
-        # note: this is only designed to work with datasets structured the same as 'noanabeshima/TinyStoriesV2'
-        #       which means no prompts or labels or columns or anything, just raw text
-        #       an example of one that should work is 'nampdn-ai/tiny-strange-textbooks' 
-        #           however it actually doesn't have a built-in validation set separation so i guess you'd have to manually make one
-        #       something like 'allenai/c4' would also require messing with my code a bit since you don't want the "timestamp" and "url" columns
+    ### dataset/dataloader: see https://huggingface.co/docs/datasets/en/loading
+    # your HuggingFace training dataset's repo address
+    dataset_name: str = 'noanabeshima/TinyStoriesV2'
+        # options include 'noanabeshima/TinyStoriesV2', 'HuggingFaceFW/fineweb' and 'HuggingFaceFW/fineweb-edu'
+        # for any other datasets you'll need to mess with the code in tools.py yourself and likely train your own tokenizer on it
+        # the fineweb datasets use the 10 billion token samples, but you could change hat pretty easily in tools.py
+    # this parameter is equivalent to `name` in datasets' `load_dataset()` function
+    data_subset: str = None
+        # options for fineweb include 'sample-10BT', 'sample-100BT', 'sample-350BT', 'CC-MAIN-2024-10', and 'Default' (all 5.4/15T tokens)
+        # None defaults to `sample-10BT` for the finewebs
+        # this parameter doesn't apply to tinyStoriesV2
+    # whether to download all the data (False) or stream it as you need it (True)
+    streaming: bool = True
+        # tinyStoriesV2 takes up a bit over 2GB and fineweb sample-10BT takes up 28.5GB, so keep that in mind if you set to False
     
     ### batch size hyperparams
     # micro_batch_size * grad_accum_steps = effective batch size

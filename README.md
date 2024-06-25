@@ -56,30 +56,14 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
 - `train.py`: functions for training a model, used in `train.ipynb`
 
 ## definite eventual TODOs
-- [ ] incorporate the tons of tiny edits from [FutureFormer](https://github.com/evintunador/FutureFormer)
-    - [ ] ~~new MQA that's flexible as either self-attention or cross-attention~~
-    - [x] new logging mechanism that understands when you input parameters out of order?
-    - [x] instead of the output layer always weight-sharing with the embedding matrix, make the sharing optional
-    - [ ] there are likely more
-- [x] fix & enable batched inference
-    - [x] update `model_evaluation.ipynb`'s teacher-forcing topk analysis to get more accurate %'s using batches
-- [x] build a better tokenizer
-	- [x] switch from character-pair-encoding to byte-pair encoding
-	- [x] switch to an efficient tensor length by accounting for the extra three tokens
-    - [ ] train new models
 - [ ] fix lr bug where it displays smaller than it actually is
-- [x] make ability to use a different dataset
-	- [ ] make dataset format more flexible
-		- [ ] auto train-val split if there's not already one
-		- [ ] auto pick the column of interest from datasets with unnecessary extra columns
-- [ ] go back and make sure model checkpointing is working. at one point it was but i've changed so much since then and haven't bothered using it so i'd bet it's broken
-- [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the docs are shorter than the model's maximum context length
-    - [ ] mess with dataloader
-    - [ ] pull mask initialization out of model & mess with it to fit multiple docs in one sequence
-- [x] switch to comparing models according to their non-embedding parameters instead of total parameters
 - [ ] add a tokens/sec metric on the training data
+- [ ] train new tokenizers
+- [ ] train new models
+- [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the docs are shorter than the model's maximum context length
 
 ### potential future TODOs
+- [ ] go back and make sure model checkpointing is working. at one point it was but i've changed so much since then and haven't bothered using it so i'd bet it's broken
 - [ ] add random useful stuff from karpathy's nanoGPT
 	- [x] flash-attention option on cuda
 	- [x] parameter count printer function built-in
@@ -95,12 +79,12 @@ This repo is part of a larger project of mine called [micro_model_sandbox]() tha
     - [x] clip gradients
         - [x] make clipping optional
     - [ ] make it parallelizable on cuda
+    - [ ] setup downloaded datasets to optinoally download as token indices rather than as strings (makes loading them during training faster)
 	- [ ] look for more
 - [ ] create `hyperparameter_search.ipynb` that knows to cancel a run if it's going over your available vram usage
     - [ ] add a more complicated (regression?) analysis to `model_comparison.ipynb` to help us analyze the hyperparameter search
 - [ ] setup .py files to be runnable in terminal rather than in the .ipynb files
     - [ ] might do this only for `train.py` and have the parallelization code only be accessible through this
-- [ ] switch to [TinyGrad](https://github.com/tinygrad/tinygrad)? very tempting bc then I could use apple silicon gpu (pytorch currently doesn't support complex numbers, which are used in [rotary positional encodings](https://arxiv.org/abs/2104.09864), on apple silicon) but I feel like it makes more sense to stick with pytorch for public accessibility reasons
 - [ ] add option to continually train pre-existing models & update its training data/hyperparameters accordingly
 - [ ] add automated model comparison analysis by GPT4 like in the [TinyStories](https://arxiv.org/abs/2305.07759) paper into `model_comparison.ipynb`
 - [ ] add sparse/local/windowed attention mask options

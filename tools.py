@@ -3,34 +3,92 @@ import torch
 ###########################################################
 ################ LOADING DATA #############################
 ###########################################################
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import IterableDataset, DataLoader
 from datasets import load_dataset
-from config import TrainConfig
-tcfg = TrainConfig()
 
-class CustomDataset(Dataset):
-    def __init__(self, split):
-        # Load the dataset
-        self.dataset = load_dataset(tcfg.dataset, split=split)
+def split_dataset(dataset, val_size: float = 0.0005):
+    """
+    a function that can split up an iterable dataset into train & val
+    """
+    # Calculate the number of validation samples
+    val_size = int(1 / val_size)  # 1 out of every val_size samples
+
+    def train_split():
+        for i, example in enumerate(dataset):
+            if i % val_size != 0:
+                yield example
+
+    def val_split():
+        for i, example in enumerate(dataset):
+            if i % val_size == 0:
+                yield example
+
+    return train_split(), val_split()
+
+class UnifiedDataLoader(IterableDataset):
+    """
+    an iterable dataset meant to function the same whether you're streaming the data or have downloaded it
+    """
+    def __init__(self, dataset, streaming=True, batch_size=1):
+        self.dataset = dataset
+        self.streaming = streaming
+        self.batch_size = batch_size
+        self.iterator = iter(self.dataset) if streaming else None
+        self.index = 0
+        if not streaming:
+            self.text_data = dataset['text']
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.streaming:
+            batch = [next(self.iterator)['text'] for _ in range(self.batch_size)]
+        else:
+            if self.index >= len(self.text_data):
+                raise StopIteration
+            end_idx = min(self.index + self.batch_size, len(self.text_data))
+            batch = self.text_data[self.index:end_idx]
+            self.index = end_idx
         
-    def __len__(self):
-        # Return the size of the dataset
-        return len(self.dataset)
-    
+        return batch
+
     def __getitem__(self, idx):
-        # Fetch one item from the dataset
+        if self.streaming:
+            raise IndexError("Streaming dataset doesn't support indexing")
         return self.dataset[idx]['text']
 
-def get_data_loader(batch_size=32, shuffle=True, split='train', num_workers=0):
-    # Create the dataset
-    dataset = CustomDataset(split)
-    # Create the DataLoader
-    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+def get_data_loaders(dataset_name: str, batch_size: int = 1, streaming: bool = True, subset_name: str = None):
+    # Create the datasets
+    if dataset_name in ['noanabeshima/TinyStoriesV2']:
+        train_dataset = load_dataset(dataset_name, split = 'train', streaming = streaming)
+        val_dataset = load_dataset(dataset_name, split = 'validation', streaming = streaming)
+    elif dataset_name in ['HuggingFaceFW/fineweb', 'HuggingFaceFW/fineweb-edu']:
+        dataset = load_dataset(
+            dataset_name, 
+            name = 'sample-10BT' if subset_name is None else subset_name,
+            streaming = streaming,
+            split = 'train' # fineweb only has a 'train' split so we'll have to split it ourselves
+        )
+        if streaming:
+            train_dataset, val_dataset = split_dataset(dataset)
+        else:
+            dataset_split = dataset.train_test_split(test_size=0.0005, seed=69, shuffle=False)
+            train_dataset, val_dataset = dataset_split['train'], dataset_split['test']
+    else:
+        raise ValueError(f"dataset_name must be in ['noanabeshima/TinyStoriesV2', 'HuggingFaceFW/fineweb', 'HuggingFaceFW/fineweb-edu']\n"\
+                        f"if you'd like to support more datasets then edit `get_data_loaders()` in `tools.py`")
+    
+    # Create the data loaders. UnifiedDataLoader is designed to work with both downloaded datasets & iterable streaming datasets
+    train_data_loader = UnifiedDataLoader(train_dataset, streaming, batch_size)
+    val_data_loader = UnifiedDataLoader(val_dataset, streaming, batch_size)
+    
+    return train_data_loader, val_data_loader
 
 def torcherize_batch(
     tokenizer, 
     batch, 
-    max_seq_len: int = 512, 
+    max_seq_len, 
     device: str = 'cuda' if torch.cuda.is_available() else 'cpu'
 ) -> (torch.Tensor, torch.Tensor):
     b = torch.zeros(len(batch), max_seq_len+1)
@@ -149,7 +207,7 @@ def load_model(
     cfg.device = device
 
     # the tokenizer
-    imported_objects = import_from_nested_path(['tokenizers', cfg.tokenizer], 'tokenizer', ['get_tokenizer'])
+    imported_objects = import_from_nested_path(['custom_tokenizers', cfg.tokenizer], 'tokenizer', ['get_tokenizer'])
     get_tokenizer = imported_objects.get('get_tokenizer')
     tokenizer = get_tokenizer(size = cfg.vocab_len)
 

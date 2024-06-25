@@ -94,7 +94,7 @@ class BPE_Tokenizer:
     def decode(self, tokens):
         """given tokens (list of integers), return Python string"""
         # first remove the bos, eos, & pad tokens if they're there
-        tokens = [i for i in tokens if i not in [509,510,511]]
+        tokens = [i for i in tokens if i not in [self.bos_id, self.eos_id, self.pad_id]]
         # the actual decoding of merges back into bytes
         ids = b"".join(self.vocab[idx] for idx in tokens)
         # conversion of bytes into string
@@ -122,6 +122,6 @@ def get_tokenizer(size: int = 8192):
     """
     sizes include 512, 1024, 2048, 4096, 8192
     """
-    path = f'tokenizers/bpe_tinyStories/models/{size-3}.model'
+    path = f'custom_tokenizers/bpe_fineweb-edu/models/{size-3}.model'
     tokenizer_data = load_tokenizer_data(path)
     return BPE_Tokenizer(tokenizer_data['merges'])
