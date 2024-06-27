@@ -65,7 +65,11 @@ This repo is part of a larger project of mine called [micro_model_sandbox](https
 - [ ] train new tokenizers
     - [x] tinystoriesv2
     - [ ] fineweb
-    - [ ] fineweb-edu
+    - [x] fineweb-edu
+    - [ ] make it possible to start from a tokenizer as a checkpoint to make a larger tokenizer
+- [ ] fix lack of multi-core CPU usage
+- [ ] figure out why nvidia-smi isn't working on lambda labs
+- [ ] save dataset as tokens rather than raw text?
 - [ ] train new models
 - [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the docs are shorter than the model's maximum context length
 

@@ -10,22 +10,22 @@ class ModelConfig:
     Yes I know dropout_rate should probably be in TrainConfig but it was easier to implement from here
     """
     # general hyperparameters
-    dim: int = 128
+    dim: int = 16
     device: str = 'cuda' if torch.cuda.is_available() else 'cpu' # can't do MPS bc metal doesn't support complex64 used in RoPE
     dropout_rate = 0.1 # percent of neurons to set to 0 during training as a way of adding randomness & improving generalization
     out_weight_share: bool = True # whether to share weights between output layer and input embedding layer
     linear_bias: bool = False # whether to use bias weights on our linear layers. Llama3 does not and I'm partial to their choice
 
     # tokenizer
-    tokenizer: str = 'bpe_tinyStories' # must choose from one of the folders in 'tokenizers/'
+    tokenizer: str = 'bpe_fineweb-edu' # must choose from one of the folders in 'tokenizers/'
         # current options: 'bpe_tinyStories', 'bpe_fineweb', 'bpe_fineweb-edu'
         # note: it is possible to train a model on a dataset different from what your tokenizer was trained on
-    vocab_len: int = 2048 # options can be found in the `models/` sub-folder inside whatever tokenizer you just chose above^
+    vocab_len: int = 32_768 # options can be found in the `models/` sub-folder inside whatever tokenizer you just chose above^
         # for `bpe_tinyStories` the options are 512, 1024, 2048
-        # for 'bpe_fineWeb' and 'bpe_fineWeb-edu' the options are 512, 1024, 2048, 4096, 8192, 16_384, 32_768, 65,563
+        # for 'bpe_fineWeb' and 'bpe_fineWeb-edu' the options are 512, 1024, 2048, 4096, 8192, 16_384, 32_768
 
     # Residual Layers
-    num_layers: int = 6 # small models should err on the side of many many layers at the expense of attention & mlp sizes
+    num_layers: int = 1 # small models should err on the side of many many layers at the expense of attention & mlp sizes
     second_resid_norm: bool = False # True adds an extra Norm after the attn & MLP, like in Grok. Only recommended if using RMSNorm
     
     # Multi-Layer Perceptrion
@@ -35,11 +35,11 @@ class ModelConfig:
     # ^ if gated == True, mlp_hidden_mult will automatically adjust to maintain parameter count
 
     # Multi-Query Attention
-    num_q_heads: int = 4 # `num_q_heads % num_kv_heads == 0` must be true
+    num_q_heads: int = 2 # `num_q_heads % num_kv_heads == 0` must be true
     num_kv_heads: int = 1 # set =num_q_heads to revert to regular multi-head attention (not recommended)
     head_dim: int = dim // num_q_heads # most common choices are 32, 64 and especially 128 bc those are what works with FlashAttention
     theta: float = 10_000 # 10_000 is the most common choice. Llama3 uses 50_000
-    max_seq_len: int = 512 # 512 is the most my 8gb of ram can handle
+    max_seq_len: int = 64 # 512 is the most my 8gb of ram can handle
 
     # normalization
     scale_first_resid: bool = True # whether to multiply the first residual state by sqrt(dim)
@@ -54,7 +54,7 @@ class TrainConfig:
     Design your training loop here
     """
     # name of the folder the model will be saved into
-    model_name: str = 'templateGPT_1m'#f'{time.strftime("%Y-%m-%d|%H-%M-%S")}' # defaults to the time that config.py was imported
+    model_name: str = f'{time.strftime("%Y-%m-%d|%H-%M-%S")}' # defaults to the time that config.py was imported
 
     ### dataset/dataloader: see https://huggingface.co/docs/datasets/en/loading
     # your HuggingFace training dataset's repo address
@@ -74,15 +74,15 @@ class TrainConfig:
     ### batch size hyperparams
     # micro_batch_size * grad_accum_steps = effective batch size
     # micro_batch_size * grad_accum_steps * max_seq_len = total number of tokens per batch
-    micro_batch_size: int = 24
-    grad_accum_steps: int = 1
+    micro_batch_size: int = 8
+    grad_accum_steps: int = 2
         # set grad_accum_steps = 1 to not do gradient accumulation
 
     ### training length
     # total number of batches to run over the course of training
     max_iters: int = 4#1_000 # i recommend at least 1_000
     # how often to print out an update on how training is going
-    eval_interval: int = 1#max_iters // 100 # doing this too often slows things down hella but also gives detailed log data
+    eval_interval: int = 2#max_iters // 100 # doing this too often slows things down hella but also gives detailed log data
     # how many samples to take at each evaluation. more means a more accurate loss/perplexity calculation
     eval_samples: int = 1 # this number can slow things down. each sample is almost like doing an extra training iteration
     # how often to save a model checkpoint
@@ -98,10 +98,10 @@ class TrainConfig:
     ### Learning Rate Schedule
         # to visualize the learning rate schedule, see cell 7 of training.ipynb
     # Initial learning rate to start from during the warmup
-    lr_init: float = 1e-4
+    lr_init: float = 1e-6
     # Maximum and minimum learning rates during annealing
-    lr_max: float = 1e-1
-    lr_min: float = 1e-2
+    lr_max: float = 1e-2
+    lr_min: float = 1e-4
         # if you'd like a flat learning rate, set lr_init = lr_min = lr_max and ignore the variables below
     
     # number of iterations for a linear warmup from lr_min to lr_max

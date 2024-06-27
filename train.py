@@ -7,7 +7,7 @@ from tools import torcherize_batch, save_model
 #################### EVALUATION ###########################
 ###########################################################
 @torch.no_grad()
-def estimate_loss(model, tokenizer, train_data_loader, test_data_loader, eval_samples = 3): # to estimate loss during the training loop
+def estimate_loss(model, tokenizer, train_data_loader, test_data_loader, eval_samples = 1): # to estimate loss during the training loop
     out = {} # dictionary to record & separate train loss from val loss
     model.eval() # sets model to eval mode so we're not keeping track of gradients
     for split in ['train', 'val']:
@@ -109,8 +109,12 @@ def train(
     # Enable anomaly detection. useful for really deep issues in the model where the gradient breaks
     if detect_anomoly: torch.autograd.set_detect_anomaly(True)
 
-    # this provides some free performance assuming your GPU supports it
-    #torch.set_float32_matmul_precision('high')
+    if model.device == 'cuda':
+        # this seems to be necessary specifically on CUDA to prevent hella erros to do with numpy &/or complex64 data type
+        torch._dynamo.config.suppress_errors = True
+    
+        # this provides some free performance assuming your GPU supports it
+        torch.set_float32_matmul_precision('high')
 
     # initializing variable(s) that are referenced before assignment
     norm = 0.0
@@ -167,9 +171,14 @@ def train(
             x,y = torcherize_batch(tokenizer, batch, cfg.max_seq_len, cfg.device)
         
             # calc micro batch gradient
-            with torch.autocast(device_type = cfg.device, dtype = torch.bfloat16): # enables mixed-precision training
+            if model.device == 'cuda':
+                with torch.autocast(device_type = cfg.device, dtype = torch.bfloat16): # enables mixed-precision training
+                    logits, loss = model(x, target_token_ids=y)
+            else: # I think this is faster on CPU?
                 logits, loss = model(x, target_token_ids=y)
+            # accounting for the size of the micro batch
             loss = loss / tcfg.grad_accum_steps
+            # adding the micro batch's loss to the total loss
             loss_accum += loss.detach()
             loss.backward()
             
@@ -194,4 +203,4 @@ def train(
     # Disable anomaly detection after the training loop
     if detect_anomoly: torch.autograd.set_detect_anomaly(False)
 
-    return model, optimizer, log_data # do i need to send out train & test dataloader?
+    return model, optimizer, log_data
