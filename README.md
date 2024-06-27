@@ -2,27 +2,35 @@
 ## about
 **this repo is currently undergoing a re-factoring. it'll likely be functional again in a week or two**
 
-This is the model I edit whenever I want to test a new transformer architecture idea I have. It's designed to be flexible with many large changes being tweakable from the config, easy to demonstrate what's happening in the progression of tensor shapes, and easy to read/edit the code. Feel free to toy around and build off of it, this repo is actually a template
+This is the model I edit whenever I want to test a new transformer architecture idea I have. It's designed to be:
+- flexible in that many large changes are tweakable from the config file rather than messing with the code
+- easy to read/edit the code since files are cleanly organized & well commented
+- well suited for training models in the 1-10m parameter range on a CPU or the 100m-1b parameter range on a GPU without editing any code, just the config file
+- easy to visualize/demonstrate what's happening in the progression of tensor shapes for learning & debugging purposes (thanks to our custom `LoggingModule.py` and `test_modules.ipynb`)
+- almost as efficient as Andrej Karpathy's [nanoGPT](https://github.com/karpathy/nanoGPT) despite everything we've added
+- up to date with the most recent SotA architecture, namely Llama 3 (Karpathy's nanoGPT is based on the very old GPT2)
 
-Notice that even though these models are very small (1 to 4m parameters), they are actually reasonable rough proxies for how well a scaled up version may do on real data thanks to our use of the [TinyStories](https://arxiv.org/abs/2305.07759) dataset. According to the original paper, somewhere in the 1 to 3m parameter range a GPT2-inspired architecture is capable of understanding that the token 'apple' is something that the main character of the tiny story 'Tim' would like to 'eat'; meaning it can actually pick up on the relationships in this text which are an isomorphic subset of the ones that a larger language model would see when training on the entire internet. This basic idea is the backbone behind microsoft's Phi family of models, originally described in the paper [Textbooks Are All You Need](https://arxiv.org/pdf/2306.11644), and how they can perform so well despite being so small. In practice the models you see here don't quite get there because 1) we train with a much smaller batch size, 2) we're using an inferior tokenizer, 3) our context length is shorter is shorter (512 tokens) and 4) likely other discrepancies I've not noticed. In the future I plan to continually improve on all of those points. I hope this repo can be of help to anyone who wants to get into designing & building novel architectures but doesn't have the compute to test a larger model on every single idea they have. I'm literally training these on the CPU of a 2019 iMac with 8gb of ram.
+Notice that even though some of these models are very small (1 to 10m parameters), they are actually reasonable rough proxies for how well a scaled up version may do on real data thanks to our use of the [TinyStories](https://arxiv.org/abs/2305.07759) dataset. According to the original paper, somewhere in the 1 to 3m parameter range a GPT2-inspired architecture is capable of understanding that the token 'apple' is something that the main character of the tiny story 'Tim' would like to 'eat'; meaning it can actually pick up on the relationships in this text which are an isomorphic subset of the ones that a larger language model would see when training on the entire internet. This basic idea is the backbone behind microsoft's Phi family of models, originally described in the paper [Textbooks Are All You Need](https://arxiv.org/pdf/2306.11644), and how they can perform so well despite being so small. I hope this repo can be of help to anyone who wants to get into designing & building novel architectures but doesn't have the compute to test a larger model on every single idea they have. I'm literally training the 1-5m parameter models on the CPU of a 2019 iMac with 8gb of ram.
+
+Then when it's time to scale up and use a GPU, all you have to do is go into the config file and switch to the [fineweb](https://huggingface.co/datasets/HuggingFaceFW/fineweb) or [fineweb-edu](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu). Realistically single old GPUs are cheap enough nowadays (less than $1 per hour) that you could train the 1-5m parameter models on them for cheap and that's what I do, but it's still nice to think that someone who's resource constrained can mess around without having to learn how to use & pay for a GPU cloud solution at all. 
 
 [![ERROR DISPLAYING IMAGE, CLICK HERE FOR VIDEO](https://img.youtube.com/vi/s9kQvDsWnbc/0.jpg)](https://www.youtube.com/watch?v=s9kQvDsWnbc)
 
-This repo is part of a larger project of mine called [micro_model_sandbox](https://github.com/evintunador/micro-GPT-sandbox) that's basically a hub for all the novel model experiments I do, with the goal of facilitating easy comparison between the different models. Basically for each of those experiments I just use this very repo as a template to start editing, and then once I'm happy with the project (or if I've just abandoned it but it's moderately functional) I add it to the sandbox. If you end up using this repo as a template, feel free to contribute your project to the sandbox as well!
+This repo is part of a larger project of mine called [micro-GPT-sandbox](https://github.com/evintunador/micro-GPT-sandbox) that's basically a hub for all the novel model experiments I do, with the goal of facilitating easy comparison between the different models. Basically for each of those experiments I just use this very repo as a template to start editing, and then once I'm happy with the project (or if I've just abandoned it but it's moderately functional) I add it to the sandbox. If you end up using this repo as a template, feel free to contribute your project to the sandbox as well!
 
 ## getting started
 1. clone the repository
 2. `cd` to the folder
 3. setup a virtual environment unless you're an agent of chaos
 4. `pip install -r requirements.txt`
-5. edit values in `config.py` to suit your liking. This might involve a lot of trial and error if you don't know what you're doing, either due to errors from incompatible parameter configurations or from going over your available vram amount. Checkout the config files for each already trained model to get an idea of what reasonable values look like
-6. Hop into `train.py` and run every cell before the final one. There's a cell where if you set the `if` statement to `True` then you'll be able to visualize what the learning rate is going to look like over the course of training (which you determined over in `config.py`)
-7. If you like the look of the model you trained, run that final cell to save it. I recommend going into `trained/` and changing the folder name if you didn't already do so when messing with the config since the default is just going to be the date & time that its training begun, which is ugly boring and confusing
+5. edit values in `config.py` to suit your liking. This might involve a lot of trial and error if you don't know what you're doing, either due to errors from incompatible parameter configurations or from going over your available vRAM amount. Checkout the config files for each already trained model to get an idea of what reasonable values look like
+6. Hop into `train.ipynb` and run every cell before the final one. There's a cell where if you set the `if` statement to `True` then you'll be able to visualize what the learning rate is going to look like over the course of training (which you determined over in `config.py`)
+7. If you like the look of the model you trained, run that final cell to save it. I recommend going into `trained/` and changing the folder name if you didn't already do so when messing with the config since the default is just going to be the date & time that its training began
 8. If you ever want to just test out a model you've already made then hop on over into `inference.ipynb` and run all the cells.
 9. If you've trained multiple models, you can compare them in `model_comparison.ipynb` as long as you remember to use the third cell to specify which models you want to compare. It'll look at loss curves over the course of training and teacher-forcing topk accuracy rate
 10. This step could really go anywhere, but if you're trying to learn how transformers work then along with reading the code in `modules/` you can use `test_modules.ipynb` to visualize how the tensor shapes change.
-11. If/when you become confident to mess with the actual code yourself and test out a novel architecture idea you've got, head on over into `modules/` and get to work. While you're doing this, make sure to use `LoggingModule` instead of `nn.module` and put `@log_io` before every class function you make so that you can use `test_modules.ipynb` for easy visualization/debugging. To see an example of one of my novel architecture edits, check out [Fractal-Head Attention]()
-12. If/when you've got a novel transformer architecture edit up and working, send it over to the [micro model sandbox](https://github.com/evintunador/micro-GPT-sandbox)!
+11. If/when you become confident to mess with the actual code yourself and test out a novel architecture idea you've got, head on over into `modules/` and get to work. While you're doing this, make sure to use `LoggingModule` instead of `nn.module` and put `@log_io` before every class function you make so that you can use `test_modules.ipynb` for easy visualization/debugging. To see an example of one of my novel architecture edits, check out [Fractal-Head Attention](https://github.com/evintunador/fractal-head-attention)
+12. If/when you've got a novel transformer architecture edit up and working, send it over to the [micro-GPT-sandbox](https://github.com/evintunador/micro-GPT-sandbox) for easy comparisons against the original templateGPT
 
 ## file structure
 - `modules/`: where all of the code for the actual model goes
@@ -30,20 +38,22 @@ This repo is part of a larger project of mine called [micro_model_sandbox](https
     - `logging.py`: defines the `LoggingModule` class, a wrapper that you should use instead of pytorch's `nn.module` in order to facilitate easy demonstration of how tensor shapes change throughout a given module
     - `mlp.py`: a two-layer multi-layer perceptron with an optional gate and either [ReLU](https://pytorch.org/docs/stable/generated/torch.nn.ReLU.html), [GeLU](https://pytorch.org/docs/stable/generated/torch.nn.GELU.html), or [SiLU](https://pytorch.org/docs/stable/generated/torch.nn.SiLU.html) nonlinearities, all configurable in `config.py`. Adding more nonlinearities is also absurdly easy
     - `model.py`: the primary class for our GPT
-    - `mqa.py`: [multi-query attention](https://arxiv.org/abs/1911.02150) with pre-computed [rotary positional encodings](https://arxiv.org/abs/2104.09864)
+    - `attention.py`: [multi-query attention](https://arxiv.org/abs/1911.02150) with pre-computed [rotary positional encodings](https://arxiv.org/abs/2104.09864)
     - `norm.py`: a norm module with an optional affine layer that allows you to switch between [RMSNorm](https://arxiv.org/abs/1910.07467), [LayerNorm](https://pytorch.org/docs/stable/generated/torch.nn.LayerNorm.html) and [CosineNorm](https://arxiv.org/pdf/1702.05870) easily using a setting over in `config.py`. Adding different normalization methods is also absurdly easy
 - `custom_tokenizers/`: a folder where you store your tokenizers
-    - `bpe_tinyStories/`: a [byte-pair encoding](https://huggingface.co/learn/nlp-course/chapter6/5) tokenizer trained on [tinyStoriesV2](https://huggingface.co/datasets/noanabeshima/TinyStoriesV2)
+    - `bpe_tinyStories/`: a [byte-pair encoding](https://huggingface.co/learn/nlp-course/chapter6/5) tokenizer trained on [tinyStoriesV2](https://huggingface.co/datasets/noanabeshima/TinyStoriesV2). Trained on the first 10k sequences from the dataset
         - `build.ipynb`: the notebook where i trained the tokenizer models
         - `tokenizer.py`: an overly-simplistic and annoyingly inefficient tokenizer with bos & eos tokens, post-sequence padding, and a `display` function to help you visualize how a given string is broken down into tokens
         - `models/`
-            - `{512, 1024, 2048, 4096}.model`: different tokenizer sizes, each a subset of the next
+            - `{509, 1021, 2045}.model`: different tokenizer sizes, each a subset of the next. 
     - `bpe_fineweb/`: a [byte-pair encoding](https://huggingface.co/learn/nlp-course/chapter6/5) tokenizer trained on [fineweb](https://huggingface.co/datasets/HuggingFaceFW/fineweb)
         - ...
-    - `bpe_tinyStories/`: a [byte-pair encoding](https://huggingface.co/learn/nlp-course/chapter6/5) tokenizer trained on [fineweb-edu](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu)
+    - `bpe_fineweb-edu/`: a [byte-pair encoding](https://huggingface.co/learn/nlp-course/chapter6/5) tokenizer trained on [fineweb-edu](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu). Trained on the first 2k sequences from the "sample-350BT" subset of fineweb-edu. We train the model on the "sample-10BT" subset which means the tokenizer was ~mostly~ trained on data the model won't see during training
         - ...
+        - `models/`
+            - `{509, 1021, 2045, 4093, 8189, 16381, 32765}.model`: different tokenizer sizes, each a subset of the next. 
 - `trained/`
-    - `templateGPT_?m_?/`: a series of yet-to-be-trained models designed to be compared against one another. they're not large enough to get intelligible output
+    - `templateGPT_?m_?/`: a series of yet-to-be-trained models designed to be compared against one another (assuming the same dataset)
         - `model_config.json`: hyperparameters of the model
         - `model.pth`: weights of the model
         - `train_config.json`: hyperparameters of the training loop used
@@ -67,14 +77,6 @@ This repo is part of a larger project of mine called [micro_model_sandbox](https
     - [ ] fineweb
     - [x] fineweb-edu
     - [ ] make it possible to start from a tokenizer as a checkpoint to make a larger tokenizer
-- [ ] fix lack of multi-core CPU usage
-- [ ] figure out why nvidia-smi isn't working on lambda labs
-- [ ] save dataset as tokens rather than raw text?
-- [ ] train new models
-- [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the docs are shorter than the model's maximum context length
-
-### potential future TODOs
-- [ ] go back and make sure model checkpointing is working. at one point it was but i've changed so much since then and haven't bothered using it so i'd bet it's broken
 - [ ] add random useful stuff from karpathy's nanoGPT
 	- [x] flash-attention option on cuda
 	- [x] parameter count printer function built-in
@@ -89,9 +91,16 @@ This repo is part of a larger project of mine called [micro_model_sandbox](https
     - [x] switch to micro batches & gradient accumulation for larger batch sizes
     - [x] clip gradients
         - [x] make clipping optional
+    - [ ] the benchmark test
     - [ ] make it parallelizable on cuda
-    - [ ] setup downloaded datasets to optinoally download as token indices rather than as strings (makes loading them during training faster)
-	- [ ] look for more
+    - [ ] setup downloaded datasets to optionally download as token indices rather than as strings (makes loading them during training faster)
+- [ ] fix issue where CPU is only using a single core during training
+- [ ] figure out why nvidia-smi isn't working on lambda labs
+- [ ] train new models
+- [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the docs are shorter than the model's maximum context length
+
+### potential future TODOs
+- [ ] go back and make sure model checkpointing is working. at one point it was but i've changed so much since then and haven't bothered using it so i'd bet it's broken
 - [ ] create `hyperparameter_search.ipynb` that knows to cancel a run if it's going over your available vram usage
     - [ ] add a more complicated (regression?) analysis to `model_comparison.ipynb` to help us analyze the hyperparameter search
 - [ ] setup .py files to be runnable in terminal rather than in the .ipynb files
