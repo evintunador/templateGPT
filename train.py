@@ -110,7 +110,7 @@ def train(
     if detect_anomoly: torch.autograd.set_detect_anomaly(True)
 
     # this provides some free performance assuming your GPU supports it
-    torch.set_float32_matmul_precision('high')
+    #torch.set_float32_matmul_precision('high')
 
     # initializing variable(s) that are referenced before assignment
     norm = 0.0
@@ -148,7 +148,7 @@ def train(
             print(
                 f"step: {i:04d}, time elapsed: {elapsed_time:.2f}s, tokens/s: {int(tokens_per_second):08d}, "
                 f"train loss: {losses['train'].mean().item():.4f}, val loss: {losses['val'].mean().item():.4f}, "
-                f"ppl: {torch.exp(losses['val']).mean().item():.0f}, lr: {current_lr:.8f}, grad norm: {norm:.4f}"
+                f"ppl: {torch.exp(losses['val']).mean().item():.2e}, lr: {current_lr:.8f}, grad norm: {norm:.4f}"
             )
             
             # Reset token count and last eval time
