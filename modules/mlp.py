@@ -4,6 +4,15 @@ import torch.nn.functional as F
 
 from modules.logging import LoggingModule, log_io
 
+class Mish(nn.Module):
+    """
+    Mish is an alternative to ReLU and its variants proposed in 2019 https://arxiv.org/abs/1908.08681
+    I have no intention of using it; rather this nn.Module is designed to demonstrate how you would go about 
+    creating your own custom nonlinearity and add it to the options
+    """
+    def forward(self, x):
+        return x * torch.tanh(torch.log1p(torch.exp(x)))
+
 class MLP(LoggingModule):
     def __init__(
         self,
@@ -33,6 +42,7 @@ class MLP(LoggingModule):
             "GeLU": nn.GELU(),
             "SiLU": nn.SiLU(),
             "ReLU": nn.ReLU(),
+            "Mish": Mish(),  # the custom Mish module; created to demonstrate how you could design your own nonlinearity
         }
         # Ensure the specified norm type exists, default to GeLU if not found
         if nonlinearity not in self.nonlinearities:
