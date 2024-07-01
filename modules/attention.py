@@ -10,17 +10,12 @@ class PrecomputeRotaryFrequencies(LoggingModule):
     Executed with real-valued complex arithmetic rather than using torch's built-in complex64 type in order to ensure MPS compatibility
     Code heavily edited from https://github.com/lucidrains/rotary-embedding-torch/blob/main/rotary_embedding_torch/rotary_embedding_torch.py
     """
-    def __init__(self, head_dim, max_seq_len: int, theta: float = 10_000.0, learnable: bool = False, 
+    def __init__(self, head_dim, max_seq_len: int, theta: float = 10_000.0, 
                  device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'):
         super().__init__()
         self.max_seq_len = max_seq_len
-        self.learnable = learnable
-        
         inv_freq = 1. / (theta ** (torch.arange(0, head_dim, 2, device=device).float() / head_dim)) # shape (head_dim // 2)
-        if learnable:
-            self.inv_freq = nn.Parameter(inv_freq)
-        else:
-            self.register_buffer('inv_freq', inv_freq)
+        self.register_buffer('inv_freq', inv_freq)
 
     @log_io
     def forward(self):
@@ -88,7 +83,7 @@ class SelfAttention(LoggingModule):
         
         q, k, v = self.Wq(x), self.Wk(x), self.Wv(x) 
             # (batch_size, seq_len, dim) -> (batch_size, seq_len, num_heads * head_dim)
-            # where q vs kv can have a different number of heads
+            # where q vs k&v can have a different number of heads
 
         q = q.view(batch_size, seq_len, self.num_q_heads, self.head_dim)
         k = k.view(batch_size, seq_len, self.num_kv_heads, self.head_dim)

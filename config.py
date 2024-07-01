@@ -9,14 +9,23 @@ class ModelConfig:
     Design your GPT here
     Yes I know dropout_rate should probably be in TrainConfig but it was easier to implement from here
     """
-    # general hyperparameters
+    ### general hyperparameters
     dim: int = 8
     device: str = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu' 
     dropout_rate = 0.1 # percent of neurons to set to 0 during training as a way of adding randomness & improving generalization
-    out_weight_share: bool = True # whether to share weights between output layer and input embedding layer
     linear_bias: bool = False # whether to use bias weights on our linear layers. Llama3 does not and I'm partial to their choice
+    out_weight_share: bool = True # whether to share weights between output layer and input embedding layer
+    
+    ### positional encoding
+    # the method to use for helping the model understand the order of tokens.
+    pos_enc_type: str = 'RoPE' # Default is 'RoPE'. Options are:
+        # 'RoPE': a relative positional encoding method used in most modern models https://arxiv.org/abs/2104.09864
+        # 'learnable': an absolute pos enc method used in GPT-2. it's not too great and adds max_seq_len * dim parameters to learn
+        # 'Sinusoidal': an absolute pos enc method used in the original "Attention is All You Need" paper https://arxiv.org/abs/1706.03762
+    # a hyperparameter used in RoPE and Sinusoidal
+    theta: float = 10_000 # 10_000 is the most common choice for both RoPE & Sinusoidal. Llama3 uses 50_000 for RoPE
 
-    # tokenizer
+    ### tokenizer
     tokenizer: str = 'bpe_tinyStories' # must choose from one of the folders in 'tokenizers/'
         # current options: 'bpe_tinyStories', 'bpe_fineweb', 'bpe_fineweb-edu'
         # note: it is possible to train a model on a dataset different from what your tokenizer was trained on
@@ -24,24 +33,23 @@ class ModelConfig:
         # for `bpe_tinyStories` the options are 512, 1024, 2048
         # for 'bpe_fineWeb' and 'bpe_fineWeb-edu' the options are 512, 1024, 2048, 4096, 8192, 16_384, 32_768
 
-    # Residual Layers
+    ### Residual Layers
     num_layers: int = 2 # small models should err on the side of many many layers at the expense of attention & mlp sizes
     second_resid_norm: bool = False # True adds an extra Norm after the attn & MLP, like in Grok. Only recommended if using RMSNorm
     
-    # Multi-Layer Perceptrion
+    ### Multi-Layer Perceptrion
     mlp_hidden_mult: int = 4 # how wide the hidden dimension of the MLP should be. if mlp_gated = True that's not quite the correct description but whatever
-    mlp_nonlinearity: str = 'SiLU' # options are 'GeLU', 'SiLU', and 'ReLU'(not recommended)
+    mlp_nonlinearity: str = 'Mish' # options are 'GeLU', 'SiLU', and 'ReLU'(not recommended)
     mlp_gated: bool = True # Turns SiLU into SwiGLU, GeLU into GeGLU, etc
     # ^ if gated == True, mlp_hidden_mult will automatically adjust to maintain parameter count
 
-    # Multi-Query Attention
+    ### Multi-Query Attention
     num_q_heads: int = 2 # `num_q_heads % num_kv_heads == 0` must be true
     num_kv_heads: int = 1 # set =num_q_heads to revert to regular multi-head attention (not recommended)
     head_dim: int = dim // num_q_heads # most common choices are 32, 64 and especially 128 bc those are what works with FlashAttention
-    theta: float = 10_000 # 10_000 is the most common choice. Llama3 uses 50_000
     max_seq_len: int = 10 # 512 is the most my 8gb of ram can handle
 
-    # normalization
+    ### normalization
     scale_first_resid: bool = True # whether to multiply the first residual state by sqrt(dim)
     norm_type: str = 'RMSNorm' # options are 'RMSNorm'(recommended), 'LayerNorm', and 'CosineNorm'. Add more options in 'norm.py'
     norm_affine: bool = True # whether to use a linear layer after each norm. recommended especially if you're using LayerNorm or CosineNorm

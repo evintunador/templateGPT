@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import math
+
 from modules.logging import LoggingModule, log_io
 from modules.norm import Norm
 from modules.attention import PrecomputeRotaryFrequencies
@@ -14,17 +16,31 @@ class Model(LoggingModule):
         self.num_layers = cfg.num_layers
         self.max_seq_len = cfg.max_seq_len
         self.vocab_len = cfg.vocab_len
+        self.dropout_rate = cfg.dropout_rate
 
         # the generate() function in inference.py references these values to build kv cache
         self.head_dim = cfg.head_dim 
         self.num_kv_heads = cfg.num_kv_heads
 
+        ### positional encodings
+        self.pos_enc_type = cfg.pos_enc_type
+        if cfg.pos_enc_type == 'learnable': # learnable, like in GPT-2
+            self.pos_embedder = nn.Embedding(cfg.max_seq_len, cfg.dim, device=cfg.device)
+        elif cfg.pos_enc_type == 'Sinusoidal': # sinusoidal, like in "Attention Is All You Need"
+            position = torch.arange(cfg.max_seq_len, device=cfg.device).unsqueeze(1)
+            div_term = torch.exp(torch.arange(0, cfg.dim, 2, device=cfg.device) * (-math.log(cfg.theta) / cfg.dim))
+            sinusoidal_embedding = torch.zeros(cfg.max_seq_len, cfg.dim, device=cfg.device)
+            sinusoidal_embedding[:, 0::2] = torch.sin(position * div_term)
+            sinusoidal_embedding[:, 1::2] = torch.cos(position * div_term)
+            self.register_buffer('pos_embedding', sinusoidal_embedding)
+        elif cfg.pos_enc_type == 'RoPE': # pre-computing rotary positional embedding frequencies
+            self.precompute_freqs = PrecomputeRotaryFrequencies(cfg.head_dim, cfg.max_seq_len, cfg.theta, cfg.device)
+        else:
+            raise InputError(f"positional encoding '{cfg.pos_enc_type}' unknown. Choose either 'RoPE', 'Sinusoidal', or 'learnable'")
+
         # residual state initialization
         self.token_embedder = nn.Embedding(self.vocab_len, cfg.dim, device=cfg.device)
         self.scale = cfg.dim ** 0.5 if cfg.scale_first_resid else 1.0
-
-        # pre-computing rotary positional embedding frequencies
-        self.precompute_freqs = PrecomputeRotaryFrequencies(cfg.head_dim, cfg.max_seq_len, cfg.theta, cfg.device)
 
         # the causal attention mask
         self.mask = torch.ones(cfg.max_seq_len, cfg.max_seq_len, dtype=torch.bool, device=cfg.device).triu(diagonal=1)
@@ -109,17 +125,34 @@ class Model(LoggingModule):
             mask = torch.nn.functional.pad(mask, (cache_len, 0, 0, 0), value=False)
             training = False
 
-        # initialize first residual state
-        x = self.token_embedder(input_token_ids) * self.scale # (batch_size, seq_len, dim)
-
-        # precompute RoPE frequencies
-        freqs = self.precompute_freqs()
+        # setting up our positional encoding
+        if self.pos_enc_type == 'learnable':
+            pos = torch.arange(0, seq_len, dtype=torch.long, device=self.device) # shape (t)
+            pos_emb = self.pos_embedder(pos)
+            freqs = None # make sure not to pass in any RoPE frequencies into the model
+        elif self.pos_enc_type == 'Sinusoidal':
+            pos_emb = self.pos_embedding[:seq_len, :].unsqueeze(0).to(self.device)
+            freqs = None # make sure not to pass in any RoPE frequencies into the model
+        elif self.pos_enc_type == 'RoPE':
+            # precomputing our RoPE frequencies
+            freqs = self.precompute_freqs()
+        else:
+            # bc of the InputError in the __init__ you shouldn't be able to get to here
+            # but I guess if you did then you'd have a model with no awareness of position
+            freqs = None
+            
+        # initializing the first residual state
+        if self.pos_enc_type in ['learnable', 'Sinusoidal']:
+            x = (self.token_embedder(input_token_ids) + pos_emb) * self.scale # (batch_size, seq_len, dim)
+        else: # RoPE gets implemented inside the attention mechanism instead of at the residual state initialization
+            x = self.token_embedder(input_token_ids) * self.scale # (batch_size, seq_len, dim)
+        if training: x = F.dropout(x, self.dropout_rate)
         
         # run through the model's layers
         for i, layer in enumerate(self.layers):
             x, kv_cache_i = layer(
                 x, 
-                freqs,
+                freqs, 
                 mask, 
                 cache_len,
                 kv_cache[i] if kv_cache is not None else None,
