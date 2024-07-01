@@ -97,7 +97,13 @@ This repo is part of a larger project of mine called [micro-GPT-sandbox](https:/
 - [ ] fix issue where CPU is only using a single core during training
 - [ ] figure out why nvidia-smi isn't working on lambda labs
 - [x] refactor the causal attention mask
-- [x] refactor RoPE to use real-valued complex arithmetic so that this repo can support Apple MPS devices
+- [ ] refactor positional encodings
+    - [x] switch to real-valued complex arithmetic so that this repo can support Apple MPS devices
+    - [ ] add learnable RoPE frequences option
+    - [ ] add regular learnable embeddings as an option
+    - [ ] add sinusoidal embeddings as an option
+- [ ] make an example custom nonlinearity nn.Module to go in `mlp.py`
+    - [ ] if any other module has a similar option for an easily add-able custom part, do that too
 - [ ] train new models
 - [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the docs are shorter than the model's maximum context length
 
