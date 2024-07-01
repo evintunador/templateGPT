@@ -4,14 +4,13 @@ import torch.nn.functional as F
 
 from modules.logging import LoggingModule, log_io
 from modules.norm import Norm
-from modules.attention import precompute_freqs_cis
+from modules.attention import PrecomputeRotaryFrequencies
 from modules.layer import Layer
 
 class Model(LoggingModule):
     def __init__(self, cfg):
         super().__init__()
         self.device = cfg.device
-
         self.num_layers = cfg.num_layers
         self.max_seq_len = cfg.max_seq_len
         self.vocab_len = cfg.vocab_len
@@ -19,10 +18,19 @@ class Model(LoggingModule):
         # the generate() function in inference.py references these values to build kv cache
         self.head_dim = cfg.head_dim 
         self.num_kv_heads = cfg.num_kv_heads
-        
+
+        # residual state initialization
         self.token_embedder = nn.Embedding(self.vocab_len, cfg.dim, device=cfg.device)
         self.scale = cfg.dim ** 0.5 if cfg.scale_first_resid else 1.0
-        
+
+        # pre-computing rotary positional embedding frequencies
+        self.precompute_freqs = PrecomputeRotaryFrequencies(cfg.head_dim, cfg.max_seq_len, cfg.theta, cfg.device)
+
+        # the causal attention mask
+        self.mask = torch.ones(cfg.max_seq_len, cfg.max_seq_len, dtype=torch.bool, device=cfg.device).triu(diagonal=1)
+            # True -> "mask this token" while False -> "Let the model see this token"
+
+        # the model itself
         self.layers = nn.ModuleList(Layer(cfg) for _ in range(cfg.num_layers))
 
         # the output projection
@@ -33,36 +41,34 @@ class Model(LoggingModule):
         self.out_weight_share = cfg.out_weight_share
         if cfg.out_weight_share: self.token_embedder.weight = self.output.weight
 
-        freqs_cis = precompute_freqs_cis(
-            cfg.head_dim,
-            cfg.max_seq_len,
-            cfg.theta
-        ).to(cfg.device)
-        self.register_buffer('freqs_cis', freqs_cis)
-
-        mask = torch.full((cfg.max_seq_len, cfg.max_seq_len), 
-                          float("-inf"), 
-                          device=cfg.device)
-        mask = torch.triu(mask, diagonal=1)
-        self.register_buffer('mask', mask)
-
+        # loss function
         self.criterion = nn.CrossEntropyLoss(ignore_index = cfg.vocab_len -1) # ignore the padding token
 
-        # init params
+        # initializing params to specific distributions. self.apply() applies the function to all parts of the model
         self.apply(self.__init__weights)
+            # should i make this optional? not sure if this distribution is still used for modern models or just GPT2
 
     def __init__weights(self, module):
         """
         GPT-2 style parameter initialization for the final linear proj in Attn & MLP Layers
-        The idea is to scale the distribution by the number of layers to ensure that the output variance =1 rather than blowing up
+        The idea is to scale the distribution by the number of layers to ensure that the output variance ==1 rather than blowing up
+        Not sure if this setup is still used for modern models. If not then I need to change this
         """
-        if isinstance(module, nn.Linear):
-            std = 0.02
+        if isinstance(module, nn.Linear): # for every linear layer
+            std = 0.02 # distribution will be centered at 0 with standard deviation of 0.02
+
+            # specific weight matrices at the end of each layer are given smaller std to keep the residual stream small
             if hasattr(module, 'GPT_scale_init'):
                 std *= (2 * self.num_layers) ** -0.5
+
+            # carries out the actual initialization
             torch.nn.init.normal_(module.weight, mean=0.0, std=std)
+
+            # biases should instead be initialized to zeros
             if module.bias is not None:
-                torch.nn.init.zeros_(module.bias)
+                torch.nn.init.zeros_(module.bias) 
+
+        # the embedding matrix doesn't count as an nn.Linear so we've gotta do it again for that
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
@@ -84,32 +90,36 @@ class Model(LoggingModule):
         kv_cache: list = None,
         target_token_ids: torch.Tensor = None,
     ) -> (torch.Tensor, torch.Tensor):
+        """
+        Our GPT's primary forward function that calls all the other modules
+        """
         input_token_ids = input_token_ids.to(self.device)
         if target_token_ids is not None:
             target_token_ids = target_token_ids.to(self.device)
 
         batch_size, seq_len = input_token_ids.shape
 
-        if target_token_ids is not None: # if training
+        if target_token_ids is not None: # training setup
             assert input_token_ids.shape == target_token_ids.shape
             assert seq_len == self.max_seq_len
             mask = self.mask
-            freqs_cis = self.freqs_cis
             training = True
-            cache_len = None
-        else: # if performing inference
-            freqs_cis = self.freqs_cis[cache_len : cache_len + seq_len]
+        else: # inference setup
             mask = self.mask[:seq_len, :seq_len]
-            mask = torch.hstack([torch.zeros((seq_len, cache_len), device=self.device), mask])# (seq_len, seq_len + cache_len)
+            mask = torch.nn.functional.pad(mask, (cache_len, 0, 0, 0), value=False)
             training = False
 
         # initialize first residual state
         x = self.token_embedder(input_token_ids) * self.scale # (batch_size, seq_len, dim)
+
+        # precompute RoPE frequencies
+        freqs = self.precompute_freqs()
+        
         # run through the model's layers
         for i, layer in enumerate(self.layers):
             x, kv_cache_i = layer(
                 x, 
-                freqs_cis, 
+                freqs,
                 mask, 
                 cache_len,
                 kv_cache[i] if kv_cache is not None else None,
@@ -117,6 +127,7 @@ class Model(LoggingModule):
             )
             # update the kv cache
             if kv_cache is not None: kv_cache[i] = kv_cache_i 
+        
         # the final output of the model
         logits = self.output(self.final_norm(x)) # (batch_size, seq_len, vocab_len)
 
@@ -125,10 +136,7 @@ class Model(LoggingModule):
                 logits.view(batch_size * seq_len, self.vocab_len),
                 target_token_ids.reshape(batch_size * seq_len)
             )
-        else:
-            loss = None
-
-        if loss is not None: # if we're training, the second thing to be outputted will be the loss
             return logits, loss
-        else: # if we're doing inference, the second thing to be outputted will be the updated kv_cache
+        else: 
+            # if we're doing inference, the second variable to be outputted will be the updated kv_cache
             return logits, kv_cache

@@ -10,22 +10,22 @@ class ModelConfig:
     Yes I know dropout_rate should probably be in TrainConfig but it was easier to implement from here
     """
     # general hyperparameters
-    dim: int = 16
-    device: str = 'cuda' if torch.cuda.is_available() else 'cpu' # can't do MPS bc metal doesn't support complex64 used in RoPE
+    dim: int = 8
+    device: str = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu' 
     dropout_rate = 0.1 # percent of neurons to set to 0 during training as a way of adding randomness & improving generalization
     out_weight_share: bool = True # whether to share weights between output layer and input embedding layer
     linear_bias: bool = False # whether to use bias weights on our linear layers. Llama3 does not and I'm partial to their choice
 
     # tokenizer
-    tokenizer: str = 'bpe_fineweb-edu' # must choose from one of the folders in 'tokenizers/'
+    tokenizer: str = 'bpe_tinyStories' # must choose from one of the folders in 'tokenizers/'
         # current options: 'bpe_tinyStories', 'bpe_fineweb', 'bpe_fineweb-edu'
         # note: it is possible to train a model on a dataset different from what your tokenizer was trained on
-    vocab_len: int = 32_768 # options can be found in the `models/` sub-folder inside whatever tokenizer you just chose above^
+    vocab_len: int = 512 # options can be found in the `models/` sub-folder inside whatever tokenizer you just chose above^
         # for `bpe_tinyStories` the options are 512, 1024, 2048
         # for 'bpe_fineWeb' and 'bpe_fineWeb-edu' the options are 512, 1024, 2048, 4096, 8192, 16_384, 32_768
 
     # Residual Layers
-    num_layers: int = 1 # small models should err on the side of many many layers at the expense of attention & mlp sizes
+    num_layers: int = 2 # small models should err on the side of many many layers at the expense of attention & mlp sizes
     second_resid_norm: bool = False # True adds an extra Norm after the attn & MLP, like in Grok. Only recommended if using RMSNorm
     
     # Multi-Layer Perceptrion
@@ -39,7 +39,7 @@ class ModelConfig:
     num_kv_heads: int = 1 # set =num_q_heads to revert to regular multi-head attention (not recommended)
     head_dim: int = dim // num_q_heads # most common choices are 32, 64 and especially 128 bc those are what works with FlashAttention
     theta: float = 10_000 # 10_000 is the most common choice. Llama3 uses 50_000
-    max_seq_len: int = 64 # 512 is the most my 8gb of ram can handle
+    max_seq_len: int = 10 # 512 is the most my 8gb of ram can handle
 
     # normalization
     scale_first_resid: bool = True # whether to multiply the first residual state by sqrt(dim)
@@ -68,13 +68,13 @@ class TrainConfig:
         # None defaults to `sample-10BT` for the finewebs
         # this parameter doesn't apply to tinyStoriesV2
     # whether to download all the data (False) or stream it as you need it (True)
-    streaming: bool = True
+    streaming: bool = False
         # tinyStoriesV2 takes up a bit over 2GB and fineweb sample-10BT takes up 28.5GB, so keep that in mind if you set to False
     
     ### batch size hyperparams
     # micro_batch_size * grad_accum_steps = effective batch size
     # micro_batch_size * grad_accum_steps * max_seq_len = total number of tokens per batch
-    micro_batch_size: int = 8
+    micro_batch_size: int = 4
     grad_accum_steps: int = 2
         # set grad_accum_steps = 1 to not do gradient accumulation
 
