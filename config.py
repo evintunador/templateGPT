@@ -13,17 +13,18 @@ class ModelConfig:
     dim: int = 128
     device: str = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu' 
     dropout_rate = 0.1 # percent of neurons to set to 0 during training as a way of adding randomness & improving generalization
-    linear_bias: bool = False # whether to use bias weights on our linear layers. Llama3 does not and I'm partial to their choice
+    linear_bias: bool = True # whether to use bias weights on our linear layers. Llama3 does not and I'm partial to their choice
     out_weight_share: bool = True # whether to share weights between output layer and input embedding layer
     
     ### positional encoding
     # the method to use for helping the model understand the order of tokens.
-    pos_enc_type: str = 'RoPE' # Default is 'RoPE'. Options are:
+    pos_enc_type: str = 'learnable' # Default is 'RoPE'. Options are:
         # 'RoPE': a relative positional encoding method used in most modern models https://arxiv.org/abs/2104.09864
         # 'learnable': an absolute pos enc method used in GPT-2. it's not too great and adds max_seq_len * dim parameters to learn
         # 'Sinusoidal': an absolute pos enc method used in the original "Attention is All You Need" paper https://arxiv.org/abs/1706.03762
     # a hyperparameter used in RoPE and Sinusoidal
     theta: float = 10_000 # 10_000 is the most common choice for both RoPE & Sinusoidal. Llama3 uses 50_000 for RoPE
+        # does nothing if pos_enc_type=='learnable'
 
     ### tokenizer
     tokenizer: str = 'bpe_tinyStories' # must choose from one of the folders in 'tokenizers/'
@@ -39,8 +40,8 @@ class ModelConfig:
     
     ### Multi-Layer Perceptrion
     mlp_hidden_mult: float = 4 # how wide the hidden dimension of the MLP should be. if mlp_gated = True that's not quite the correct description but whatever
-    mlp_nonlinearity: str = 'SiLU' # options are 'GeLU', 'SiLU', and 'ReLU'(not recommended)
-    mlp_gated: bool = True # Turns SiLU into SwiGLU, GeLU into GeGLU, etc. https://arxiv.org/abs/2002.05202v1
+    mlp_nonlinearity: str = 'GeLU' # options are 'GeLU', 'SiLU', and 'ReLU'(not recommended)
+    mlp_gated: bool = False # Turns SiLU into SwiGLU, GeLU into GeGLU, etc. https://arxiv.org/abs/2002.05202v1
     # ^ if gated == True, mlp_hidden_mult will automatically adjust to maintain parameter count
 
     ### Multi-Query Attention
@@ -50,8 +51,8 @@ class ModelConfig:
     max_seq_len: int = 512 # 512 is the most my 8gb of ram can handle. I think GPT2 did 1024
 
     ### normalization
-    scale_first_resid: bool = True # whether to multiply the first residual state by sqrt(dim)
-    norm_type: str = 'RMSNorm' # options are 'RMSNorm'(recommended), 'LayerNorm', and 'CosineNorm'. Add more options in 'norm.py'
+    scale_first_resid: bool = False # whether to multiply the first residual state by sqrt(dim)
+    norm_type: str = 'LayerNorm' # options are 'RMSNorm'(recommended), 'LayerNorm', and 'CosineNorm'. Add more options in 'norm.py'
     norm_affine: bool = True # whether to use a linear layer after each norm. recommended especially if you're using LayerNorm or CosineNorm
     norm_bias: bool = True # whether to add a bias to the linear layer after each norm. doesn't do anything if norm_affine == False
     eps: float = 1e-6 # small constant to prevent division by 0. Not really worth editing
@@ -62,7 +63,7 @@ class TrainConfig:
     Design your training loop here
     """
     # name of the folder the model will be saved into
-    model_name: str = 'templateGPT_1m_minLlama3'#f'{time.strftime("%Y-%m-%d|%H-%M-%S")}' # defaults to the time that config.py was imported
+    model_name: str = 'templateGPT_1m_picoGPT2'#f'{time.strftime("%Y-%m-%d|%H-%M-%S")}' # defaults to the time that config.py was imported
 
     ### dataset/dataloader: see https://huggingface.co/docs/datasets/en/loading
     # your HuggingFace training dataset's repo address
@@ -120,7 +121,7 @@ class TrainConfig:
     # type of annealment to use. Annealment is when the learning rate decreases over the course of training
     anneal_type: str = 'cos' # options: 'cos'(recommended) and 'lin'
     # number of times to bring the learning rate back up from lr_min to lr_max in-between the warmup & final flat
-    num_restarts: int = 3 # if you don't want to use warm restarts, set =0 and ignore T_mult
+    num_restarts: int = 0 # if you don't want to use warm restarts, set =0 and ignore T_mult
     # relative length of each warm restart compared to the previous.
     T_mult: int = 2 # =1 makes all restarts the same length, <1 means they get shorter and >1 makes them longer
     
