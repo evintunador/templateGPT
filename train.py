@@ -204,3 +204,89 @@ def train(
     if detect_anomoly: torch.autograd.set_detect_anomaly(False)
 
     return model, optimizer, log_data
+
+###########################################################
+#################### RUNNING THIS FILE ####################
+###########################################################
+
+import argparse
+if __name__ == "__main__":
+    
+    parser = argparse.ArgumentParser(description="Trains a model using the settings in config.py")
+    
+    # Optional parameters
+    parser.add_argument("--device", type=str, 
+                        default= 'cuda' if torch.cuda.is_available() \
+                        else 'mps' if torch.backends.mps.is_available() \
+                        else 'cpu', 
+                        help="Device of choice. Defaults to fastest available option (cuda > mps > cpu")
+    parser.add_argument("--save_model", type=bool, default=True, help="Whether to save model after training (default True)")
+
+    args = parser.parse_args()
+    
+    assert args.device in ['cuda', 'mps', 'cpu'], f"device must be either 'cuda', 'mps', or 'cpu'"
+    
+    try:
+        # config file
+        from config import ModelConfig, TrainConfig
+        cfg = ModelConfig()
+        if cfg.device != args.device:
+            print(f"device set in config.py ('{cfg.device}') over-written and set to '{args.device}'")
+            cfg.device = args.device
+        tcfg = TrainConfig()
+        print(cfg, '\n\n', tcfg)
+        
+        # import the tokenizer specified by cfg
+        from tools import import_from_nested_path
+        imported_objects = import_from_nested_path(['custom_tokenizers', cfg.tokenizer], 'tokenizer', ['get_tokenizer'])
+        get_tokenizer = imported_objects.get('get_tokenizer')
+        tokenizer = get_tokenizer(size = cfg.vocab_len)
+        
+        # the actual model modules (MLP, attention mechanism, norm, layer, etc)
+        from modules.model import Model
+        model = Model(cfg).to(cfg.device)
+        # this makes the model way more efficient
+        if model.device == 'cuda':
+            model = torch.compile(model) 
+            # ^if this takes too long & you're debugging you can comment it out, but def leave it on for full training runs
+        
+        # print the number of parameters in the model
+        print("\nnumber of parameters: %.2fM\n" % (model.get_num_params()/1e6,))
+        print(model)
+
+        from tools import get_data_loaders
+        train_data_loader, test_data_loader = get_data_loaders(
+            tcfg.dataset_name, 
+            batch_size = tcfg.micro_batch_size, 
+            streaming = tcfg.streaming,
+            subset_name = tcfg.data_subset
+        )
+
+        from train import scheduler_lambda, get_optimizer, train
+        optimizer = get_optimizer(model, tcfg)
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=scheduler_lambda)
+
+        model, optimizer, log_data = train(
+            model, 
+            tokenizer, 
+            cfg, 
+            optimizer,
+            scheduler,
+            tcfg, 
+            train_data_loader,
+            test_data_loader,
+            #log_data: list = None, # for picking up training from a checkpoint
+            #detect_anomoly = False # use if you're getting crazy errors about a the gradient being broken
+        )
+
+        from inference import generate
+        prompt = "Once upon a time,"
+        model.eval()
+        print(generate(prompt, model, tokenizer)[0])
+
+        if args.save_model == True:
+            from tools import save_model
+            save_model(model, cfg, tcfg, log_data)
+    
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")

@@ -94,9 +94,12 @@ This repo is part of a larger project of mine called [micro-GPT-sandbox](https:/
     - [ ] the benchmark test
     - [ ] make it parallelizable on cuda
     - [ ] setup downloaded datasets to optionally download as token indices rather than as strings (makes loading them during training faster)
-- [ ] fix issue where CPU is only using a single core during training
+- [ ] fix issue where CPU is only using a single core during training on my iMac
 - [ ] figure out why nvidia-smi isn't working on lambda labs
-- [x] refactor the causal attention mask
+- [s] setup .py files to be runnable in terminal rather than in the .ipynb files
+    - [x] inference.py
+    - [s] train.py
+- [x] refactor the causal attention mask to be more efficient & work better with flash attention
 - [x] refactor positional encodings
     - [x] switch to real-valued complex arithmetic so that this repo can support Apple MPS devices
     - [x] add regular learnable embeddings as an option
@@ -109,8 +112,6 @@ This repo is part of a larger project of mine called [micro-GPT-sandbox](https:/
 - [ ] go back and make sure model checkpointing is working. at one point it was but i've changed so much since then and haven't bothered using it so i'd bet it's broken
 - [ ] create `hyperparameter_search.ipynb` that knows to cancel a run if it's going over your available vram usage
     - [ ] add a more complicated (regression to derive scaling laws?) analysis to `model_comparison.ipynb` to help us analyze the hyperparameter search
-- [ ] setup .py files to be runnable in terminal rather than in the .ipynb files
-    - might do this only for `train.py` and have the parallelization code only be accessible through this
 - [ ] add option to continually train pre-existing models & update its training data/hyperparameters accordingly
 - [ ] add automated model comparison analysis by GPT4 like in the [TinyStories](https://arxiv.org/abs/2305.07759) paper into `model_comparison.ipynb`
 - [ ] add sparse/local/windowed attention mask options

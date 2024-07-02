@@ -1,4 +1,5 @@
 import torch
+from tqdm import tqdm
 
 def sampler(
     logits: torch.Tensor,  # (batch_size, input_len, vocab_size)
@@ -90,7 +91,7 @@ def generate(
 
     # now the actual inference loop
     cache_len = 0
-    for i in range(max_gen_len):
+    for i in tqdm(range(max_gen_len), unit='tokens', leave=False):
 
         # running the model
         with torch.no_grad():
@@ -136,3 +137,56 @@ def generate(
             
     decoded_sequences = [tokenizer.decode(seq.tolist()) for seq in tokens]
     return decoded_sequences
+
+###########################################################
+#################### RUNNING THIS FILE ####################
+###########################################################
+
+import argparse
+from tools import load_model
+from inference import generate
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run inference using a specified model and prompts.")
+    
+    # Model selection
+    parser.add_argument("model", help="Name of the pre-trained model to use")
+    # Prompts
+    parser.add_argument("prompts", nargs="+", help="One or more prompts for text generation")
+    
+    # Optional parameters
+    parser.add_argument("--temp", type=float, default=0.7, help="Temperature for sampling (default: 0.7)")
+    parser.add_argument("--top-k", type=int, default=50, help="Top-k filtering value (default: 50)")
+    parser.add_argument("--top-p", type=float, default=0.9, help="Top-p filtering value (default: 0.9)")
+    parser.add_argument("--max-len", type=int, help="Maximum generation length")
+    parser.add_argument("--mem-div", type=int, default=1, help="Memory saver divisor (default: 1)")
+    parser.add_argument("--show-tokens", action="store_true", help="Display tokenization of the output")
+    
+    args = parser.parse_args()
+    
+    try:
+        # Load the model
+        model, tokenizer, cfg = load_model(args.model)
+        
+        # Generate text
+        outputs = generate(
+            args.prompts,
+            model,
+            tokenizer,
+            temperature=args.temp,
+            top_k=args.top_k,
+            top_p=args.top_p,
+            max_gen_len=args.max_len,
+            memory_saver_div=args.mem_div
+        )
+        
+        # Print outputs
+        for i, output in enumerate(outputs):
+            if args.show_tokens:
+                print(tokenizer.display(output))
+            else:
+                print(output)
+            print()
+    
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")

@@ -8,7 +8,7 @@ class Mish(nn.Module):
     """
     Mish is an alternative to ReLU and its variants proposed in 2019 https://arxiv.org/abs/1908.08681
     I have no intention of using it; rather this nn.Module is designed to demonstrate how you would go about 
-    creating your own custom nonlinearity and add it to the options
+    creating your own custom nonlinearity and add it to the list of options
     """
     def forward(self, x):
         return x * torch.tanh(torch.log1p(torch.exp(x)))

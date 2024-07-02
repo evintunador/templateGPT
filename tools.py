@@ -189,6 +189,8 @@ def save_model(model, cfg, tcfg, log_data = None, checkpoint = False):
     with open(f'{path}/train_config.json', 'w') as f:
         json.dump(tcfg_dict, f)
 
+    print(f'model successfully saved to {path}')
+
 def load_model(
     name: str,
     device: str = 'cuda' if torch.cuda.is_available() else 'cpu',
@@ -220,8 +222,5 @@ def load_model(
     # Load the saved state dictionary
     path = f'{model_name}/model.pth'
     model.load_state_dict(torch.load(path)) 
-    
-    print("number of parameters: %.2fM" % (model.get_num_params()/1e6,))
-    print(model)
 
     return model, tokenizer, cfg
