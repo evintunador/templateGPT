@@ -10,7 +10,7 @@ class ModelConfig:
     Yes I know dropout_rate should probably be in TrainConfig but it was easier to implement from here
     """
     ### general hyperparameters
-    dim: int = 96
+    dim: int = 128
     device: str = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu' 
     dropout_rate = 0.1 # percent of neurons to set to 0 during training as a way of adding randomness & improving generalization
     linear_bias: bool = False # whether to use bias weights on our linear layers. Llama3 does not and I'm partial to their choice
@@ -34,7 +34,7 @@ class ModelConfig:
         # for 'bpe_fineWeb' and 'bpe_fineWeb-edu' the options are 512, 1024, 2048, 4096, 8192, 16_384, 32_768
 
     ### Residual Layers
-    num_layers: int = 8 # small models should err on the side of many many layers at the expense of attention & mlp sizes
+    num_layers: int = 4 # small models should err on the side of many many layers at the expense of attention & mlp sizes
     second_resid_norm: bool = False # True adds an extra Norm after the attn & MLP, like in Grok. Only recommended if using RMSNorm
     
     ### Multi-Layer Perceptrion
@@ -62,7 +62,7 @@ class TrainConfig:
     Design your training loop here
     """
     # name of the folder the model will be saved into
-    model_name: str = f'{time.strftime("%Y-%m-%d|%H-%M-%S")}' # defaults to the time that config.py was imported
+    model_name: str = 'templateGPT_1m_minLlama3'#f'{time.strftime("%Y-%m-%d|%H-%M-%S")}' # defaults to the time that config.py was imported
 
     ### dataset/dataloader: see https://huggingface.co/docs/datasets/en/loading
     # your HuggingFace training dataset's repo address
@@ -82,15 +82,15 @@ class TrainConfig:
     ### batch size hyperparams
     # micro_batch_size * grad_accum_steps = effective batch size
     # micro_batch_size * grad_accum_steps * max_seq_len = total number of tokens per batch
-    micro_batch_size: int = 8
-    grad_accum_steps: int = 8
+    micro_batch_size: int = 4
+    grad_accum_steps: int = 16
         # set grad_accum_steps = 1 to not do gradient accumulation
 
     ### training length
     # total number of batches to run over the course of training
-    max_iters: int = 10#2_000 # i recommend at least 1_000
+    max_iters: int = 2_000 # i recommend at least 1_000
     # how often to print out an update on how training is going
-    eval_interval: int = 2#max_iters // 100 # doing this too often slows things down hella but also gives detailed log data
+    eval_interval: int = max_iters // 100 # doing this too often slows things down hella but also gives detailed log data
     # how many samples to take at each evaluation. more means a more accurate loss/perplexity calculation
     eval_samples: int = 1 # this number can slow things down. each sample is almost like doing an extra training iteration
     # how often to save a model checkpoint
@@ -106,10 +106,10 @@ class TrainConfig:
     ### Learning Rate Schedule
         # to visualize the learning rate schedule, see cell 7 of training.ipynb
     # Initial learning rate to start from during the warmup
-    lr_init: float = 1e-4
+    lr_init: float = 1e-6
     # Maximum and minimum learning rates during annealing
-    lr_max: float = 1e-1
-    lr_min: float = 1e-2
+    lr_max: float = 1e-2
+    lr_min: float = 1e-4
         # if you'd like a flat learning rate, set lr_init = lr_min = lr_max and ignore the variables below
     
     # number of iterations for a linear warmup from lr_min to lr_max
@@ -120,7 +120,7 @@ class TrainConfig:
     # type of annealment to use. Annealment is when the learning rate decreases over the course of training
     anneal_type: str = 'cos' # options: 'cos'(recommended) and 'lin'
     # number of times to bring the learning rate back up from lr_min to lr_max in-between the warmup & final flat
-    num_restarts: int = 0 # if you don't want to use warm restarts, set =0 and ignore T_mult
+    num_restarts: int = 3 # if you don't want to use warm restarts, set =0 and ignore T_mult
     # relative length of each warm restart compared to the previous.
     T_mult: int = 2 # =1 makes all restarts the same length, <1 means they get shorter and >1 makes them longer
     

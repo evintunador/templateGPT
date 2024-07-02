@@ -55,13 +55,11 @@ python inference.py "insert_model_name_here" "prompt"
     - `model.py`: the primary class for our GPT
     - `norm.py`: a norm module with an optional affine layer that allows you to switch between [RMSNorm](https://arxiv.org/abs/1910.07467), [LayerNorm](https://pytorch.org/docs/stable/generated/torch.nn.LayerNorm.html) and [CosineNorm](https://arxiv.org/pdf/1702.05870) easily using a setting over in `config.py`. Adding different normalization methods is also absurdly easy
 - `trained/`
-    - `templateGPT_?m_?/`: a series of yet-to-be-trained models designed to be compared against one another (assuming the same dataset)
+    - `templateGPT_1m_picoLlama3/`: a 1m parameter model trained for 2k iterations with a batch size of 128 (tinyStoriesV2 dataset is ~2.76 million sequences, so not quite a full epoch)
         - `model_config.json`: hyperparameters of the model
         - `model.pth`: weights of the model
         - `train_config.json`: hyperparameters of the training loop used
         - `log_data.csv`: a record of loss and a couple other key metrics over the course of training
-    - `2024-06-30|21-27-54`: an unreasonably tiny model that has not been trained; only here temporarily for testing purposes
-    - `2024-07-01|00-43-53`: a 1m parameter model trained for only 100 iterations with a batch size of 64; only here temporarily for testing purposes
 - `config.py`: all of the easily editable model and training settings
 - `inference.py`: run with multiple prompts and edit your settings like so:
 ```

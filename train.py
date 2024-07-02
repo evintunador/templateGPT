@@ -220,7 +220,7 @@ if __name__ == "__main__":
                         else 'mps' if torch.backends.mps.is_available() \
                         else 'cpu', 
                         help="Device of choice. Defaults to fastest available option (cuda > mps > cpu")
-    parser.add_argument("--dont_save_model", action="store_true", help="Use this to prevent a model from being saved; useful if you're just checking to confirm that training is working")
+    parser.add_argument("--dont_save_model", action='store_true', help="Use this to prevent a model from being saved; useful if you're just checking to confirm that training is working")
 
     args = parser.parse_args()
     
@@ -279,12 +279,18 @@ if __name__ == "__main__":
             #detect_anomoly = False # use if you're getting crazy errors about a the gradient being broken
         )
 
-        from inference import generate
-        prompt = "Once upon a time,"
+        # doing a little test after the training loop finishes
+        optimizer.zero_grad()
         model.eval()
-        print(generate(prompt, model, tokenizer)[0])
+        from inference import generate
+        if cfg.tokenizer == 'bpe_tinyStories':
+            prompt = "Once upon a time,"
+        else:
+            prompt = "The meaning of life is"
+        with torch.no_grad():
+            print(generate(prompt, model, tokenizer, max_gen_len=100)[0])
 
-        if args.save_model == True:
+        if not args.dont_save_model:
             from tools import save_model
             save_model(model, cfg, tcfg, log_data)
     

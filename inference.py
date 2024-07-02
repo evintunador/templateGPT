@@ -158,7 +158,7 @@ if __name__ == "__main__":
     parser.add_argument("--temp", type=float, default=0.7, help="Temperature for sampling (default: 0.7)")
     parser.add_argument("--top_k", type=int, default=50, help="Top-k filtering value (default: 50)")
     parser.add_argument("--top_p", type=float, default=0.9, help="Top-p filtering value (default: 0.9)")
-    parser.add_argument("--max_len", type=int, help="Maximum generation length")
+    parser.add_argument("--max_len", type=int, default=None, help="Maximum generation length")
     parser.add_argument("--mem_div", type=int, default=1, help="Memory saver divisor (default: 1)")
     parser.add_argument("--show_tokens", action="store_true", help="Display tokenization of the output")
     
