@@ -193,7 +193,7 @@ def save_model(model, cfg, tcfg, log_data = None, checkpoint = False):
 
 def load_model(
     name: str,
-    device: str = 'cuda' if torch.cuda.is_available() else 'cpu',
+    device: str = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu',
 ):
     model_name = f'trained/{name}'
 

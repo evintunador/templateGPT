@@ -24,22 +24,17 @@ This repo is part of a larger project of mine called [micro-GPT-sandbox](https:/
 3. setup a virtual environment unless you're an agent of chaos
 4. `pip install -r requirements.txt`
 5. edit values in `config.py` to suit your liking. This might involve a lot of trial and error if you don't know what you're doing, either due to errors from incompatible parameter configurations or from going over your available vRAM amount. Checkout the config files for each already trained model to get an idea of what reasonable values look like
-6. Hop into `train.ipynb` and run every cell before the final one. There's a cell where if you set the `if` statement to `True` then you'll be able to visualize what the learning rate is going to look like over the course of training (which you determined over in `config.py`)
-7. If you like the look of the model you trained, run that final cell to save it. I recommend going into `trained/` and changing the folder name if you didn't already do so when messing with the config since the default is just going to be the date & time that its training began
-8. If you ever want to just test out a model you've already made then hop on over into `inference.ipynb` and run all the cells.
-9. If you've trained multiple models, you can compare them in `model_comparison.ipynb` as long as you remember to use the third cell to specify which models you want to compare. It'll look at loss curves over the course of training and teacher-forcing topk accuracy rate
-10. This step could really go anywhere, but if you're trying to learn how transformers work then along with reading the code in `modules/` you can use `test_modules.ipynb` to visualize how the tensor shapes change.
-11. If/when you become confident to mess with the actual code yourself and test out a novel architecture idea you've got, head on over into `modules/` and get to work. While you're doing this, make sure to use `LoggingModule` instead of `nn.module` and put `@log_io` before every class function you make so that you can use `test_modules.ipynb` for easy visualization/debugging. 
-12. If/when you've got a novel transformer architecture edit up and working, send it over to the [micro-GPT-sandbox](https://github.com/evintunador/micro-GPT-sandbox) for easy comparisons against the original templateGPT
+6. Run `pythontrain.py` to train your own version of templateGPT
+7. If you ever want to just test out a model you've already made then run the following command. The name of each model is the name of the folder it resides in inside `models/`. The model you run need not match up with the hyperparameters currently in `config.py`, that file is just for setting up training.
+```
+python inference.py "insert_model_name_here" "prompt"
+```
+8. If you've trained multiple models, you can compare them in `model_comparison.ipynb` as long as you remember to use the third cell to specify which models you want to compare. It'll look at loss curves over the course of training and teacher-forcing topk accuracy rate
+9. This step could really go anywhere, but if you're trying to learn how transformers work then along with reading the code in `modules/` you can use `test_modules.ipynb` to visualize how the tensor shapes change. Each cell shows you in detail how a different module or scenario works in terms of how the tensor shapes change as they move through
+10. If/when you become confident to mess with the actual code yourself and test out a novel architecture idea you've got, head on over into `modules/` and get to work. While you're doing this, make sure to use `LoggingModule` instead of `nn.module` and put `@log_io` before every class function you make so that you can use `test_modules.ipynb` for easy visualization/debugging. 
+11. If/when you've got a novel transformer architecture edit up and working, send it over to your own template/fork of [micro-GPT-sandbox](https://github.com/evintunador/micro-GPT-sandbox) for easy comparisons against the original templateGPT
 
 ## file structure
-- `modules/`: where all of the code for the actual model goes
-    - `layer.py`: defines each residual connection layer of our GPT
-    - `logging.py`: defines the `LoggingModule` class, a wrapper that you should use instead of pytorch's `nn.module` in order to facilitate easy demonstration of how tensor shapes change throughout a given module
-    - `mlp.py`: a two-layer multi-layer perceptron with an optional gate and either [ReLU](https://pytorch.org/docs/stable/generated/torch.nn.ReLU.html), [GeLU](https://pytorch.org/docs/stable/generated/torch.nn.GELU.html), or [SiLU](https://pytorch.org/docs/stable/generated/torch.nn.SiLU.html) nonlinearities, all configurable in `config.py`. Adding more nonlinearities is also absurdly easy
-    - `model.py`: the primary class for our GPT
-    - `attention.py`: [multi-query attention](https://arxiv.org/abs/1911.02150) with pre-computed [rotary positional encodings](https://arxiv.org/abs/2104.09864) that knows to automatically use [Flash Attention](https://github.com/Dao-AILab/flash-attention) if you have access to a cuda GPU.
-    - `norm.py`: a norm module with an optional affine layer that allows you to switch between [RMSNorm](https://arxiv.org/abs/1910.07467), [LayerNorm](https://pytorch.org/docs/stable/generated/torch.nn.LayerNorm.html) and [CosineNorm](https://arxiv.org/pdf/1702.05870) easily using a setting over in `config.py`. Adding different normalization methods is also absurdly easy
 - `custom_tokenizers/`: a folder where you store your tokenizers
     - `bpe_tinyStories/`: a [byte-pair encoding](https://huggingface.co/learn/nlp-course/chapter6/5) tokenizer trained on the first 10k sequences from the [TinyStoriesV2](https://huggingface.co/datasets/noanabeshima/TinyStoriesV2) dataset, which is a fan-made upgrade over the original [TinyStories](https://huggingface.co/datasets/roneneldan/TinyStories)
         - `build.ipynb`: the notebook where i trained the tokenizer models
@@ -52,59 +47,50 @@ This repo is part of a larger project of mine called [micro-GPT-sandbox](https:/
         - ...
         - `models/`
             - `{509, 1021, 2045, 4093, 8189, 16381, 32765}.model`: different tokenizer sizes, each a subset of the next. 
+- `modules/`: where all of the code for the actual model goes
+    - `attention.py`: [multi-query attention](https://arxiv.org/abs/1911.02150) with pre-computed [rotary positional encodings](https://arxiv.org/abs/2104.09864) that knows to automatically use [Flash Attention](https://github.com/Dao-AILab/flash-attention) if you have access to a cuda GPU.
+    - `layer.py`: defines each residual connection layer of our GPT
+    - `logging.py`: defines the `LoggingModule` class, a wrapper that you should use instead of pytorch's `nn.module` in order to facilitate easy demonstration of how tensor shapes change throughout a given module
+    - `mlp.py`: a two-layer multi-layer perceptron with an optional gate and either [ReLU](https://pytorch.org/docs/stable/generated/torch.nn.ReLU.html), [GeLU](https://pytorch.org/docs/stable/generated/torch.nn.GELU.html), or [SiLU](https://pytorch.org/docs/stable/generated/torch.nn.SiLU.html) nonlinearities, all configurable in `config.py`. Adding more nonlinearities is also absurdly easy
+    - `model.py`: the primary class for our GPT
+    - `norm.py`: a norm module with an optional affine layer that allows you to switch between [RMSNorm](https://arxiv.org/abs/1910.07467), [LayerNorm](https://pytorch.org/docs/stable/generated/torch.nn.LayerNorm.html) and [CosineNorm](https://arxiv.org/pdf/1702.05870) easily using a setting over in `config.py`. Adding different normalization methods is also absurdly easy
 - `trained/`
     - `templateGPT_?m_?/`: a series of yet-to-be-trained models designed to be compared against one another (assuming the same dataset)
         - `model_config.json`: hyperparameters of the model
         - `model.pth`: weights of the model
         - `train_config.json`: hyperparameters of the training loop used
         - `log_data.csv`: a record of loss and a couple other key metrics over the course of training
-- `inference.ipynb`: open this notebook if you just want to see the output of one of the models
-- `model_comparison.ipynb`: open this notebook to compare different models against each other. includes loss curve plots and topk teacher-forcing accuracy rate
-- `testing_modules.ipynb`: creates easy printouts that allow you to follow the progression of tensor shapes for demonstration & debugging purposes of all the modules in `model.py`. If you're building new modules for a novel architecture idea you have then this notebook will be of extreme value to you in debugging & visualization
-- `train.ipynb`: open this notebook to train a new model
+    - `2024-06-30|21-27-54`: an unreasonably tiny model that has not been trained; only here temporarily for testing purposes
+    - `2024-07-01|00-43-53`: a 1m parameter model trained for only 100 iterations with a batch size of 64; only here temporarily for testing purposes
 - `config.py`: all of the easily editable model and training settings
-- `inference.py`: functions for performing inference; used in multiple `.ipynb` files
+- `inference.py`: run with multiple prompts and edit your settings like so:
+```
+python inference.py "insert_model_name_here" "prompt 1" "prompt 2" "prompt..." --temp=0.7 --top_k=50 --top_p=0.9 --max_len=100 --mem_div=1 --show_tokens
+```
+    - values shown are defaults, except for max_len which defaults to the maximum context length of the chosen model
+    - mem_div determines how small of a set of queries to use when utilizing kv caching to save memory. For example, if the model's maximum context length is 512 and mem_div=8 then 64 query vectors will be used and up to 448 key&value vectors cached
+    - show_tokens returns a list of strings where each string is its own token. Useful for visualizing the tokenizer
+- `model_comparison.ipynb`: open this notebook to compare different models against each other. includes loss curve plots and topk teacher-forcing accuracy rate
 - `model_comparison.py`: functions for comparing models; used in `model_comparison.ipynb`
-- `requirements.txt`: I should probably change this to only include the packages that are actually necessary and not be so strict on versions. The command I used to get this list is `pip freeze | grep -v " @ file://" > requirements.txt` and then I deleted the version numbers, lmk if you know of a better method
+- `test_modules.ipynb`: creates easy printouts that allow you to follow the progression of tensor shapes for demonstration & debugging purposes of all the modules in `model.py`. If you're building new modules for a novel architecture idea you have then this notebook will be of extreme value to you in debugging & visualization. Also includes visualizations of the learning rate scheduler and how a given piece of text is tokenized with your chozen tokenizer
 - `tools.py`: A variety of functions & classes that don't fit elsewhere and/or are used by more than one of the jupyter notebooks. I should prolly find a better way to organize these
-- `train.py`: functions for training a model, used in `train.ipynb`
+- `train.py`: first edit `config.py` then run this file to train a model like so:
+```
+python train.py --device=cuda
+```
 
-## definite eventual TODOs
-- [x] fix lr bug where it displays smaller than it actually is
-- [x] add a tokens/sec metric on the training data
+## definite TODOs
 - [ ] train new tokenizers
     - [x] tinystoriesv2
     - [ ] fineweb
     - [x] fineweb-edu
     - [ ] make it possible to start from a tokenizer as a checkpoint to make a larger tokenizer
-- [ ] add random useful stuff from karpathy's nanoGPT
-	- [x] flash-attention option on cuda
-	- [x] parameter count printer function built-in
-	- [x] switch to measuring non-embedding parameters for model comparisons
-    - [x] new parameter initialization
-    - [x] make output layer weight-tying to embedding input optional
-	- [x] TF32 for free performance improvement
-	- [x] mixed precision training
-	- [x] optional torch.compile
-	- [x] adamw betas in config
-    - [x] prevent weight decay on Norm affine params
-    - [x] switch to micro batches & gradient accumulation for larger batch sizes
-    - [x] clip gradients
-        - [x] make clipping optional
+- [ ] add useful stuff from karpathy's nanoGPT
     - [ ] the benchmark test
     - [ ] make it parallelizable on cuda
     - [ ] setup downloaded datasets to optionally download as token indices rather than as strings (makes loading them during training faster)
 - [ ] fix issue where CPU is only using a single core during training on my iMac
 - [ ] figure out why nvidia-smi isn't working on lambda labs
-- [s] setup .py files to be runnable in terminal rather than in the .ipynb files
-    - [x] inference.py
-    - [s] train.py
-- [x] refactor the causal attention mask to be more efficient & work better with flash attention
-- [x] refactor positional encodings
-    - [x] switch to real-valued complex arithmetic so that this repo can support Apple MPS devices
-    - [x] add regular learnable embeddings as an option
-    - [x] add sinusoidal embeddings as an option
-- [x] make an example custom nonlinearity nn.Module to go in `mlp.py`
 - [ ] train new models
 - [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the docs are shorter than the model's maximum context length
 

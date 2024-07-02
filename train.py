@@ -220,7 +220,7 @@ if __name__ == "__main__":
                         else 'mps' if torch.backends.mps.is_available() \
                         else 'cpu', 
                         help="Device of choice. Defaults to fastest available option (cuda > mps > cpu")
-    parser.add_argument("--save_model", type=bool, default=True, help="Whether to save model after training (default True)")
+    parser.add_argument("--dont_save_model", action="store_true", help="Use this to prevent a model from being saved; useful if you're just checking to confirm that training is working")
 
     args = parser.parse_args()
     
