@@ -55,11 +55,12 @@ python inference.py "insert_model_name_here" "prompt"
     - `model.py`: the primary class for our GPT
     - `norm.py`: a norm module with an optional affine layer that allows you to switch between [RMSNorm](https://arxiv.org/abs/1910.07467), [LayerNorm](https://pytorch.org/docs/stable/generated/torch.nn.LayerNorm.html) and [CosineNorm](https://arxiv.org/pdf/1702.05870) easily using a setting over in `config.py`. Adding different normalization methods is also absurdly easy
 - `trained/`
-    - `templateGPT_1m_picoLlama3/`: a 1m parameter model trained for 2k iterations with a batch size of 128 (tinyStoriesV2 dataset is ~2.76 million sequences, so not quite a full epoch)
+    - `templateGPT_1m_picoLlama3/`: a 1m parameter model trained for 2k iterations with a batch size of 64 for a total of 128k sequences (tinyStoriesV2 dataset is ~2.76 million sequences, so less than 5\% of the available dataset) and designed to resemble the architecture of [Llama 3](https://ai.meta.com/blog/meta-llama-3/)
         - `model_config.json`: hyperparameters of the model
         - `model.pth`: weights of the model
         - `train_config.json`: hyperparameters of the training loop used
         - `log_data.csv`: a record of loss and a couple other key metrics over the course of training
+    - `templateGPT_1m_picoGPT2/`: a 1m parameter model trained for 2k iterations with a batch size of 64 for a total of 128k sequences (tinyStoriesV2 dataset is ~2.76 million sequences, so less than 5\% of the available dataset) and designed to resemble the architecture of [GPT2](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf)
 - `config.py`: all of the easily editable model and training settings
 - `inference.py`: run with multiple prompts and edit your settings like so:
 ```
