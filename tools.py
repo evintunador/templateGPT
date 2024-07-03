@@ -149,47 +149,13 @@ def run_in_directory(func, path, *args, **kwargs):
 #run_in_directory(example_function, "models/customGPT/")
     
 ###########################################################
-############# SAVE / LOAD MODELS ##########################
+#################### LOAD MODELS ##########################
 ###########################################################
 import os
 import json
 from dataclasses import asdict
 import time
 import csv
-
-def save_model(model, cfg, tcfg, log_data = None, checkpoint = False):
-    if checkpoint == True:
-        path = f'trained/{tcfg.model_name}/checkpoint-{time.strftime("%Y-%m-%d|%H-%M-%S")}'
-    else:
-        path = f'trained/{tcfg.model_name}'
-    os.makedirs(path, exist_ok=True)
-    
-    if log_data is not None:
-        # Save training data to CSV
-        with open(f'{path}/log_data.csv', 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow([
-                'Step', 
-                'Learning Rate', 
-                'Train Loss', 
-                'Validation Loss', 
-                'Perplexity', 
-                'Time Elapsed'
-            ])
-            writer.writerows(log_data)
-    
-    # saving model
-    torch.save(model.state_dict(), f'{path}/model.pth')
-    
-    # saving configs
-    cfg_dict = asdict(cfg)
-    with open(f'{path}/model_config.json', 'w') as f:
-        json.dump(cfg_dict, f)
-    tcfg_dict = asdict(tcfg)
-    with open(f'{path}/train_config.json', 'w') as f:
-        json.dump(tcfg_dict, f)
-
-    print(f'model successfully saved to {path}')
 
 def load_model(
     name: str,

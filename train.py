@@ -1,7 +1,7 @@
 import torch
 import inspect
 
-from tools import torcherize_batch, save_model
+from tools import torcherize_batch
 
 ###########################################################
 #################### EVALUATION ###########################
@@ -86,6 +86,51 @@ def get_optimizer(model, tcfg):
     return optimizer
 
 ###########################################################
+#################### SAVE MODELS ##########################
+###########################################################
+import os
+import json
+from dataclasses import asdict
+import time
+import csv
+
+def save_model(model, cfg, tcfg, log_data = None, checkpoint = False):
+    if checkpoint == True:
+        path = f'trained/{tcfg.model_name}/checkpoint-{time.strftime("%Y-%m-%d|%H-%M-%S")}'
+    else:
+        path = f'trained/{tcfg.model_name}'
+    os.makedirs(path, exist_ok=True)
+    
+    if log_data is not None:
+        # Save training data to CSV
+        with open(f'{path}/log_data.csv', 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                'Step', 
+                'Time Elapsed', 
+                'Tokens Per Second',
+                'Train Loss', 
+                'Validation Loss', 
+                'Perplexity',
+                'Learning Rate', 
+                'Norm'
+            ])
+            writer.writerows(log_data)
+    
+    # saving model
+    torch.save(model.state_dict(), f'{path}/model.pth')
+    
+    # saving configs
+    cfg_dict = asdict(cfg)
+    with open(f'{path}/model_config.json', 'w') as f:
+        json.dump(cfg_dict, f)
+    tcfg_dict = asdict(tcfg)
+    with open(f'{path}/train_config.json', 'w') as f:
+        json.dump(tcfg_dict, f)
+
+    print(f'model successfully saved to {path}')
+
+###########################################################
 #################### TRAINING #############################
 ###########################################################
 import time
@@ -147,7 +192,7 @@ def train(
             log_data.append([
                 i, elapsed_time, tokens_per_second,
                 losses['train'].mean().item(), losses['val'].mean().item(), torch.exp(losses['val']).mean().item(),
-                current_lr, norm
+                current_lr.item() if isinstance(current_lr, torch.Tensor) else current_lr, norm.item() if isinstance(norm, torch.Tensor) else norm
             ])
             print(
                 f"step: {i:04d}, time elapsed: {elapsed_time:.2f}s, tokens/s: {int(tokens_per_second):08d}, "
@@ -291,7 +336,6 @@ if __name__ == "__main__":
             print(generate(prompt, model, tokenizer, max_gen_len=100)[0])
 
         if not args.dont_save_model:
-            from tools import save_model
             save_model(model, cfg, tcfg, log_data)
     
     except Exception as e:

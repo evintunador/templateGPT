@@ -10,7 +10,7 @@ class ModelConfig:
     Yes I know dropout_rate should probably be in TrainConfig but it was easier to implement from here
     """
     ### general hyperparameters
-    dim: int = 128
+    dim: int = 16
     device: str = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu' 
     dropout_rate = 0.1 # percent of neurons to set to 0 during training as a way of adding randomness & improving generalization
     linear_bias: bool = True # whether to use bias weights on our linear layers. Llama3 does not and I'm partial to their choice
@@ -63,7 +63,7 @@ class TrainConfig:
     Design your training loop here
     """
     # name of the folder the model will be saved into
-    model_name: str = 'templateGPT_1m_picoGPT2'#f'{time.strftime("%Y-%m-%d|%H-%M-%S")}' # defaults to the time that config.py was imported
+    model_name: str = f'{time.strftime("%Y-%m-%d|%H-%M-%S")}' # defaults to the time that config.py was imported
 
     ### dataset/dataloader: see https://huggingface.co/docs/datasets/en/loading
     # your HuggingFace training dataset's repo address
@@ -89,9 +89,9 @@ class TrainConfig:
 
     ### training length
     # total number of batches to run over the course of training
-    max_iters: int = 2_000 # i recommend at least 1_000
+    max_iters: int = 10 # i recommend at least 1_000
     # how often to print out an update on how training is going
-    eval_interval: int = max_iters // 100 # doing this too often slows things down hella but also gives detailed log data
+    eval_interval: int = 2#max_iters // 100 # doing this too often slows things down hella but also gives detailed log data
     # how many samples to take at each evaluation. more means a more accurate loss/perplexity calculation
     eval_samples: int = 1 # this number can slow things down. each sample is almost like doing an extra training iteration
     # how often to save a model checkpoint

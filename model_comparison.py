@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from typing import List
-from tools import load_model, torcherize_batch, get_data_loader, import_from_nested_path
+from tools import load_model, torcherize_batch, get_data_loaders, import_from_nested_path
 
 def plot_column_from_csv(models, x_column, y_column, log_x=False, log_y=False, trim_percentage=0):
     """
@@ -71,9 +71,9 @@ def calculate_topk_accuracy(logits, targets, k=5, padding_idx=None):
     else:
         return valid_correct.float().mean()
 
-def evaluate_models(models_to_compare: List, topk: int = 5, batch_size: int = 32):
+def evaluate_models(models_to_compare: List, dataset_name: str, topk: int = 5, batch_size: int = 32):
     # Data preparation
-    data_loader = get_data_loader(batch_size = batch_size, split = 'validation')
+    _, data_loader = get_data_loaders(dataset_name, batch_size = batch_size)
     text = next(iter(data_loader))
 
     # Evaluate models
@@ -82,6 +82,7 @@ def evaluate_models(models_to_compare: List, topk: int = 5, batch_size: int = 32
         model, tokenizer, cfg = load_model(model_name)
     
         x, y = torcherize_batch(tokenizer, text, max_seq_len = cfg.max_seq_len)
+        x, y = x.to(cfg.device), y.to(cfg.device)
         # x and y are tensors shape [batch_size, max_seq_len] of dtype torch.int64
         
         with torch.no_grad():
