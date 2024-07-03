@@ -15,6 +15,7 @@ class ModelConfig:
     dropout_rate = 0.1 # percent of neurons to set to 0 during training as a way of adding randomness & improving generalization
     linear_bias: bool = False # whether to use bias weights on our linear layers. Llama3 does not and I'm partial to their choice
     out_weight_share: bool = True # whether to share weights between output layer and input embedding layer
+    max_seq_len: int = 128 # 512 is the most my 8gb of ram can handle. I think GPT2 did 1024
     
     ### positional encoding
     # the method to use for helping the model understand the order of tokens.
@@ -49,7 +50,6 @@ class ModelConfig:
     num_q_heads: int = 2 # `num_q_heads % num_kv_heads == 0` must be true
     num_kv_heads: int = 1 # set =num_q_heads to revert to regular multi-head attention (not recommended)
     head_dim: int = dim // num_q_heads # most common choices are 32, 64 and especially 128 bc those are what works with FlashAttention
-    max_seq_len: int = 128 # 512 is the most my 8gb of ram can handle. I think GPT2 did 1024
 
     ### normalization
     scale_first_resid: bool = True # whether to multiply the first residual state by sqrt(dim)
@@ -59,7 +59,45 @@ class ModelConfig:
     eps: float = 1e-6 # small constant to prevent division by 0. Not really worth editing
 
     def __post_init__(self):
+        
+        # General
+        assert isinstance(self.dim, int) and self.dim > 0, "dim must be a positive integer"
+        assert self.device in ['cuda', 'mps', 'cpu'], "device must be 'cuda', 'mps', or 'cpu'"
+        assert 0 <= self.dropout_rate <= 1, "dropout_rate must be between 0 and 1"
+        assert isinstance(self.linear_bias, bool), "linear_bias must be a boolean"
+        assert isinstance(self.out_weight_share, bool), "out_weight_share must be a boolean"
+        assert isinstance(self.max_seq_len, int) and self.max_seq_len > 0, "max_seq_len must be a positive integer"
+    
+        # Positional
+        assert self.pos_enc_type in ['RoPE', 'learnable', 'Sinusoidal'], "pos_enc_type must be 'RoPE', 'learnable', or 'Sinusoidal'"
+        assert self.theta > 0, "theta must be a positive number"
+    
+        # Tokenizer
+        assert self.tokenizer in ['bpe_tinyStories', 'bpe_fineweb', 'bpe_fineweb-edu', 'byte'], "Invalid tokenizer"
         if self.tokenizer == 'byte': self.vocab_len = 259 # 259 = 256 bytes + 3 special tokens
+        assert isinstance(self.vocab_len, int) and self.vocab_len > 0, "vocab_len must be a positive integer"
+    
+        # Residual layer
+        assert isinstance(self.num_layers, int) and self.num_layers > 0, "num_layers must be a positive integer"
+        assert isinstance(self.second_resid_norm, bool), "second_resid_norm must be a boolean"
+    
+        # MLP
+        assert self.mlp_hidden_mult > 0, "mlp_hidden_mult must be a positive number"
+        assert self.mlp_nonlinearity in ['GeLU', 'SiLU', 'ReLU'], "mlp_nonlinearity must be 'GeLU', 'SiLU', or 'ReLU'"
+        assert isinstance(self.mlp_gated, bool), "mlp_gated must be a boolean"
+    
+        # Multi-Query Attention
+        assert isinstance(self.num_q_heads, int) and self.num_q_heads > 0, "num_q_heads must be a positive integer"
+        assert isinstance(self.num_kv_heads, int) and self.num_kv_heads > 0, "num_kv_heads must be a positive integer"
+        assert self.num_q_heads % self.num_kv_heads == 0, "num_q_heads must be divisible by num_kv_heads"
+        assert self.dim % self.num_q_heads == 0, "dim must be divisible by num_q_heads"
+    
+        # Normalization
+        assert isinstance(self.scale_first_resid, bool), "scale_first_resid must be a boolean"
+        assert self.norm_type in ['RMSNorm', 'LayerNorm', 'CosineNorm'], "norm_type must be 'RMSNorm', 'LayerNorm', or 'CosineNorm'"
+        assert isinstance(self.norm_affine, bool), "norm_affine must be a boolean"
+        assert isinstance(self.norm_bias, bool), "norm_bias must be a boolean"
+        assert self.eps > 0, "eps must be a positive number"
 
 @dataclass
 class TrainConfig:
@@ -135,4 +173,50 @@ class TrainConfig:
         return middle_section / sum(self.T_mult ** i for i in range(self.num_restarts+1))
 
     def __post_init__(self):
-        assert self.grad_accum_steps > 0
+        # General 
+        assert isinstance(self.model_name, str) and len(self.model_name) > 0, "model_name must be a non-empty string"
+    
+        # Dataset 
+        assert isinstance(self.dataset_name, str) and len(self.dataset_name) > 0, "dataset_name must be a non-empty string"
+        assert self.data_subset is None or isinstance(self.data_subset, str), "data_subset must be None or a string"
+        assert isinstance(self.streaming, bool), "streaming must be a boolean"
+    
+        # Batch size 
+        assert isinstance(self.micro_batch_size, int) and self.micro_batch_size > 0, "micro_batch_size must be a positive integer"
+        assert isinstance(self.grad_accum_steps, int) and self.grad_accum_steps > 0, "grad_accum_steps must be a positive integer"
+    
+        # Training length 
+        assert isinstance(self.max_iters, int) and self.max_iters > 0, "max_iters must be a positive integer"
+        assert isinstance(self.eval_interval, int) and self.eval_interval > 0, "eval_interval must be a positive integer"
+        assert isinstance(self.eval_samples, int) and self.eval_samples > 0, "eval_samples must be a positive integer"
+        assert self.checkpoint_interval is None or (isinstance(self.checkpoint_interval, int) and self.checkpoint_interval > 0), \
+        "checkpoint_interval must be None or a positive integer"
+    
+        # AdamW hyperparameter 
+        assert 0 < self.beta1 < 1, "beta1 must be between 0 and 1"
+        assert 0 < self.beta2 < 1, "beta2 must be between 0 and 1"
+        assert self.epsilon > 0, "epsilon must be a positive number"
+        assert self.weight_decay >= 0, "weight_decay must be non-negative"
+        assert self.grad_clip > 0, "grad_clip must be a positive number"
+    
+        # Learning rate schedule 
+        assert self.lr_init > 0, "lr_init must be a positive number"
+        assert self.lr_max > 0, "lr_max must be a positive number"
+        assert self.lr_min > 0, "lr_min must be a positive number"
+        assert self.lr_min <= self.lr_max, "lr_min must be less than or equal to lr_max"
+        assert self.lr_init <= self.lr_max, "lr_init must be less than or equal to lr_max"
+    
+        assert isinstance(self.warmup_iters, int) and self.warmup_iters >= 0, "warmup_iters must be a non-negative integer"
+        assert isinstance(self.final_flat_iters, int) and self.final_flat_iters >= 0, "final_flat_iters must be a non-negative integer"
+        assert self.warmup_iters + self.final_flat_iters <= self.max_iters, "warmup_iters + final_flat_iters must be less than or equal to max_iters"
+    
+        assert self.anneal_type in ['cos', 'lin'], "anneal_type must be 'cos' or 'lin'"
+        assert isinstance(self.num_restarts, int) and self.num_restarts >= 0, "num_restarts must be a non-negative integer"
+        assert self.T_mult > 0, "T_mult must be a positive number"
+    
+        # Verify T_0 calculation
+        try:
+            T_0 = self.T_0()
+            assert isinstance(T_0, (int, float)) and T_0 > 0, "T_0 calculation must return a positive number"
+        except Exception as e:
+            raise ValueError(f"Error in T_0 calculation: {str(e)}")
