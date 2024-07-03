@@ -118,9 +118,9 @@ def load_tokenizer_data(path):
         tokenizer_data = pickle.load(f)
     return tokenizer_data
 
-def get_tokenizer(size: int = 8192):
+def get_tokenizer(size: int = 32768):
     """
-    sizes include 512, 1024, 2048, 4096, 8192
+    sizes include 512, 1024, 2048, 4096, 8192, 16384, 32768
     """
     path = f'custom_tokenizers/bpe_fineweb-edu/models/{size-3}.model'
     tokenizer_data = load_tokenizer_data(path)

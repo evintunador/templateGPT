@@ -46,7 +46,9 @@ python inference.py "insert_model_name_here" "prompt"
     - `bpe_fineweb-edu/`: a [byte-pair encoding](https://huggingface.co/learn/nlp-course/chapter6/5) tokenizer trained on the first 2k sequences from the "sample-350BT" subset of [fineweb-edu](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu). We train the model on the "sample-10BT" subset which means the tokenizer was ~mostly~ trained on data the model won't see during training
         - ...
         - `models/`
-            - `{509, 1021, 2045, 4093, 8189, 16381, 32765}.model`: different tokenizer sizes, each a subset of the next. 
+            - `{509, 1021, 2045, 4093, 8189, 16381, 32765}.model`: different tokenizer sizes, each a subset of the next.
+    - 'byte/': choose this to use bytes instead of tokens
+          - ...
 - `modules/`: where all of the code for the actual model goes
     - `attention.py`: [multi-query attention](https://arxiv.org/abs/1911.02150) with pre-computed [rotary positional encodings](https://arxiv.org/abs/2104.09864) that knows to automatically use [Flash Attention](https://github.com/Dao-AILab/flash-attention) if you have access to a cuda GPU.
     - `layer.py`: defines each residual connection layer of our GPT
@@ -94,6 +96,7 @@ python train.py --device=cuda
 - [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the docs are shorter than the model's maximum context length
 
 ### potential future TODOs
+- [ ] add a byte-level tokenizer
 - [ ] go back and make sure model checkpointing is working. at one point it was but i've changed so much since then and haven't bothered using it so i'd bet it's broken
 - [ ] create `hyperparameter_search.ipynb` that knows to cancel a run if it's going over your available vram usage
     - [ ] add a more complicated (regression to derive scaling laws?) analysis to `model_comparison.ipynb` to help us analyze the hyperparameter search

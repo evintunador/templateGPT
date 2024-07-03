@@ -10,15 +10,15 @@ class ModelConfig:
     Yes I know dropout_rate should probably be in TrainConfig but it was easier to implement from here
     """
     ### general hyperparameters
-    dim: int = 16
+    dim: int = 64
     device: str = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu' 
     dropout_rate = 0.1 # percent of neurons to set to 0 during training as a way of adding randomness & improving generalization
-    linear_bias: bool = True # whether to use bias weights on our linear layers. Llama3 does not and I'm partial to their choice
+    linear_bias: bool = False # whether to use bias weights on our linear layers. Llama3 does not and I'm partial to their choice
     out_weight_share: bool = True # whether to share weights between output layer and input embedding layer
     
     ### positional encoding
     # the method to use for helping the model understand the order of tokens.
-    pos_enc_type: str = 'learnable' # Default is 'RoPE'. Options are:
+    pos_enc_type: str = 'RoPE' # Options are:
         # 'RoPE': a relative positional encoding method used in most modern models https://arxiv.org/abs/2104.09864
         # 'learnable': an absolute pos enc method used in GPT-2. it's not too great and adds max_seq_len * dim parameters to learn
         # 'Sinusoidal': an absolute pos enc method used in the original "Attention is All You Need" paper https://arxiv.org/abs/1706.03762
@@ -27,10 +27,11 @@ class ModelConfig:
         # does nothing if pos_enc_type=='learnable'
 
     ### tokenizer
-    tokenizer: str = 'bpe_tinyStories' # must choose from one of the folders in 'tokenizers/'
-        # current options: 'bpe_tinyStories', 'bpe_fineweb', 'bpe_fineweb-edu'
-        # note: it is possible to train a model on a dataset different from what your tokenizer was trained on
-    vocab_len: int = 2048 # options can be found in the `models/` sub-folder inside whatever tokenizer you just chose above^
+    tokenizer: str = 'byte' # must choose from one of the folders in 'tokenizers/'
+        # current options: 'bpe_tinyStories', 'bpe_fineweb', 'bpe_fineweb-edu', 'byte'
+            # it is possible to train a model on a dataset different from what your tokenizer was trained on
+            # if you choose 'byte' then vocab_len will be ignored/overridden
+    vocab_len: int = 512 # options can be found in the `models/` sub-folder inside whatever tokenizer you just chose above^
         # for `bpe_tinyStories` the options are 512, 1024, 2048
         # for 'bpe_fineWeb' and 'bpe_fineWeb-edu' the options are 512, 1024, 2048, 4096, 8192, 16_384, 32_768
 
@@ -40,22 +41,25 @@ class ModelConfig:
     
     ### Multi-Layer Perceptrion
     mlp_hidden_mult: float = 4 # how wide the hidden dimension of the MLP should be. if mlp_gated = True that's not quite the correct description but whatever
-    mlp_nonlinearity: str = 'GeLU' # options are 'GeLU', 'SiLU', and 'ReLU'(not recommended)
-    mlp_gated: bool = False # Turns SiLU into SwiGLU, GeLU into GeGLU, etc. https://arxiv.org/abs/2002.05202v1
+    mlp_nonlinearity: str = 'SiLU' # options are 'GeLU', 'SiLU', and 'ReLU'(not recommended)
+    mlp_gated: bool = True # Turns SiLU into SwiGLU, GeLU into GeGLU, etc. https://arxiv.org/abs/2002.05202v1
     # ^ if gated == True, mlp_hidden_mult will automatically adjust to maintain parameter count
 
     ### Multi-Query Attention
     num_q_heads: int = 2 # `num_q_heads % num_kv_heads == 0` must be true
     num_kv_heads: int = 1 # set =num_q_heads to revert to regular multi-head attention (not recommended)
     head_dim: int = dim // num_q_heads # most common choices are 32, 64 and especially 128 bc those are what works with FlashAttention
-    max_seq_len: int = 512 # 512 is the most my 8gb of ram can handle. I think GPT2 did 1024
+    max_seq_len: int = 128 # 512 is the most my 8gb of ram can handle. I think GPT2 did 1024
 
     ### normalization
-    scale_first_resid: bool = False # whether to multiply the first residual state by sqrt(dim)
-    norm_type: str = 'LayerNorm' # options are 'RMSNorm'(recommended), 'LayerNorm', and 'CosineNorm'. Add more options in 'norm.py'
+    scale_first_resid: bool = True # whether to multiply the first residual state by sqrt(dim)
+    norm_type: str = 'RMSNorm' # options are 'RMSNorm'(recommended), 'LayerNorm', and 'CosineNorm'. Add more options in 'norm.py'
     norm_affine: bool = True # whether to use a linear layer after each norm. recommended especially if you're using LayerNorm or CosineNorm
     norm_bias: bool = True # whether to add a bias to the linear layer after each norm. doesn't do anything if norm_affine == False
     eps: float = 1e-6 # small constant to prevent division by 0. Not really worth editing
+
+    def __post_init__(self):
+        if self.tokenizer == 'byte': self.vocab_len = 259 # 259 = 256 bytes + 3 special tokens
 
 @dataclass
 class TrainConfig:
@@ -89,9 +93,9 @@ class TrainConfig:
 
     ### training length
     # total number of batches to run over the course of training
-    max_iters: int = 10 # i recommend at least 1_000
+    max_iters: int = 100 # we'll refer to iterations of batches instead of epochs over the dataset
     # how often to print out an update on how training is going
-    eval_interval: int = 2#max_iters // 100 # doing this too often slows things down hella but also gives detailed log data
+    eval_interval: int = 10#max_iters // 100 # doing this too often slows things down hella but also gives detailed log data
     # how many samples to take at each evaluation. more means a more accurate loss/perplexity calculation
     eval_samples: int = 1 # this number can slow things down. each sample is almost like doing an extra training iteration
     # how often to save a model checkpoint
@@ -130,6 +134,5 @@ class TrainConfig:
         middle_section = self.max_iters - self.warmup_iters - self.final_flat_iters
         return middle_section / sum(self.T_mult ** i for i in range(self.num_restarts+1))
 
-    def __post__init(self):
-        assert total_batch_size // micro_batch_size == 0, 'micro batches must add up to total batch size'
-        assert grad_accum_steps > 0
+    def __post_init__(self):
+        assert self.grad_accum_steps > 0

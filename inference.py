@@ -72,12 +72,12 @@ def generate(
     assert max_context_window >= max_prompt_len, 'please decrease memory_saver_div so that the entire initial prompt can fit into kv_cache'
     
     max_gen_len = max_seq_len - max_prompt_len if max_gen_len is None else max_gen_len
-
+    
     tokens_padded = [
         tokens + [tokenizer.pad_id] * (max_prompt_len - len(tokens)) for tokens in tokens_list
     ]
     tokens = torch.tensor(tokens_padded, device=model.device).to(torch.long) # (batch_size, max_prompt_len)
-
+    
     batch_size = tokens.shape[0]
     if memory_saver_div != 1:
         kv_cache = [{ # Initialize kv caches for each layer
@@ -127,14 +127,14 @@ def generate(
         # update our kv cache length
         if tokens.shape[1] >= max_context_window:
             cache_len += 1
-
+    
     # Post-processing step to replace all tokens after EOS with padding tokens
     for idx in range(batch_size):
         eos_position = (tokens[idx] == tokenizer.eos_id).nonzero(as_tuple=True)[0]
         if eos_position.numel() > 0:
             eos_idx = eos_position[0].item()
             tokens[idx, eos_idx + 1:] = tokenizer.pad_id
-            
+    
     decoded_sequences = [tokenizer.decode(seq.tolist()) for seq in tokens]
     return decoded_sequences
 
