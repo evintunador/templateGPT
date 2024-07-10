@@ -4,9 +4,10 @@ from tqdm import tqdm
 def sampler(
     logits: torch.Tensor,  # (batch_size, input_len, vocab_size)
     indices: torch.Tensor = None,  # specify which slice of logits to use
-    temperature: float = 0.7,  # controls randomness. set to 1.0 in order to not use temperature
-    top_k: int = 50,  # max number of top tokens considered. set to tokenizer.vocab_len or preferably None in order to not use top_k
-    top_p: float = 0.9,  # cumulative probability threshold. set to 1.0 or preferably None in order to not use top_p
+    temperature: float = 1.0,  # controls randomness. set to 1.0 in order to not use temperature
+    min_p: float = 0.05,  # min-p sampling threshold https://arxiv.org/abs/2407.01082
+    top_k: int = None,  # max number of top tokens considered. set to tokenizer.vocab_len or preferably None in order to not use top_k
+    top_p: float = None,  # cumulative probability threshold. set to 1.0 or preferably None in order to not use top_p
 ):
     """Generate token predictions from logits."""
     vocab_len, device = logits.shape[-1], logits.device
@@ -22,13 +23,20 @@ def sampler(
     probs = torch.softmax(logits, dim=-1)
     probs_sort, probs_idx = torch.sort(probs, dim=-1, descending=True) # both are (batch_size, vocab_size)
 
-    # Top-p filtering
+    # Min-p sampling
+    if min_p is not None:
+        probs_max = probs_sort[:, 0].unsqueeze(-1)
+        min_p_threshold = min_p * probs_max
+        min_p_mask = probs_sort < min_p_threshold
+        probs_sort = torch.where(min_p_mask, 0, probs_sort)
+        
+    # Top-p filtering (if specified)
     if top_p is not None:
         probs_sum = torch.cumsum(probs_sort, dim=-1) # (batch_size, vocab_size)
         top_ps_mask = (probs_sum - probs_sort) > top_p # 0's are top-p selections & 1's are to be excluded
         probs_sort = torch.where(top_ps_mask, 0, probs_sort) 
 
-    # Top-k filtering
+    # Top-k filtering (if specified)
     if top_k is not None:
         top_ks_mask = torch.arange(probs_idx.shape[-1], device=probs_idx.device) >= top_k # shape (vocab_size) tensor that iterates up by 1's
         top_ks_mask = top_ks_mask.expand(probs_idx.shape[0], -1) # (batch_size, vocab_size)
@@ -51,9 +59,10 @@ def generate(
     prompt: str, # either a single string or a list of strings for the prompt
     model,  # function that should output (batch_size,seq_len,vocab_len) tensor and a tensor w/ a single loss value (not used)
     tokenizer, # tokenizer of choice
-    temperature: float = 0.7, # values above 1 increase entropy of predicted words. values near zero decrease entropy
-    top_k: int = 50, # optionally prevents the model from sampling tokens that don't fit within the list of top k most likely tokens
-    top_p: float = 0.9, # optionally prevents the model from sampling tokens that don't fit within the cumsum range
+    temperature: float = 1.0, # values above 1 increase entropy of predicted words. values near zero decrease entropy
+    min_p: float = 0.05, # min-p sampling threshold https://arxiv.org/abs/2407.01082
+    top_k: int = None, # optionally prevents the model from sampling tokens that don't fit within the list of top k most likely tokens
+    top_p: float = None, # optionally prevents the model from sampling tokens that don't fit within the cumsum range
     max_gen_len: int = None, # maximum length you want the model to generate
     memory_saver_div: int = 1, # defaults to full max_seq_len**2 memory use. probably needs to be power of 2. not all models can take advantage of this
 ):
@@ -89,6 +98,9 @@ def generate(
     # for keeping track of if/when each sequence outputs an EOS token so that we can end the output
     eos_flags = torch.zeros(batch_size, dtype=torch.bool, device=model.device)
 
+    # Convert min_p=0 to None to disable it if 0 was passed in
+    min_p = None if min_p == 0 else min_p
+    
     # now the actual inference loop
     cache_len = 0
     for i in tqdm(range(max_gen_len), unit='tokens', leave=False):
@@ -107,7 +119,7 @@ def generate(
         ], device=model.device)
           
         # turn the logits into probabilities and sample from them
-        next_tokens = sampler(logits, indices, temperature, top_k, top_p)
+        next_tokens = sampler(logits, indices, temperature, min_p, top_k, top_p)
 
         # Update eos_flags
         eos_flags |= (next_tokens.squeeze() == tokenizer.eos_id)
@@ -155,9 +167,10 @@ if __name__ == "__main__":
     parser.add_argument("prompts", nargs="+", help="One or more prompts for text generation")
     
     # Optional parameters
-    parser.add_argument("--temp", type=float, default=0.7, help="Temperature for sampling (default: 0.7)")
-    parser.add_argument("--top_k", type=int, default=50, help="Top-k filtering value (default: 50)")
-    parser.add_argument("--top_p", type=float, default=0.9, help="Top-p filtering value (default: 0.9)")
+    parser.add_argument("--temp", type=float, default=1.0, help="Temperature for sampling (default: 1.0)")
+    parser.add_argument("--min_p", type=float, default=0.05, help="Min-p sampling threshold (default: 0.05). Set to 0 to disable. https://arxiv.org/abs/2407.01082")
+    parser.add_argument("--top_k", type=int, default=None, help="Top-k filtering value (default: None)")
+    parser.add_argument("--top_p", type=float, default=None, help="Top-p filtering value (default: None)")
     parser.add_argument("--max_len", type=int, default=None, help="Maximum generation length")
     parser.add_argument("--mem_div", type=int, default=1, help="Memory saver divisor (default: 1)")
     parser.add_argument("--show_tokens", action="store_true", help="Display tokenization of the output")
@@ -174,6 +187,7 @@ if __name__ == "__main__":
             model,
             tokenizer,
             temperature=args.temp,
+            min_p=args.min_p,
             top_k=args.top_k,
             top_p=args.top_p,
             max_gen_len=args.max_len,

@@ -66,7 +66,7 @@ python inference.py "insert_model_name_here" "prompt"
 - `config.py`: all of the easily editable model and training settings
 - `inference.py`: run with multiple prompts and edit your settings like so:
 ```
-python inference.py "insert_model_name_here" "prompt 1" "prompt 2" "prompt..." --temp=0.7 --top_k=50 --top_p=0.9 --max_len=100 --mem_div=1 --show_tokens
+python inference.py "insert_model_name_here" "prompt 1" "prompt 2" "prompt..." --temp=0.7 --min_p=0.05 --top_k=None --top_p=None --max_len=100 --mem_div=1 --show_tokens
 ```
     - values shown are defaults, except for max_len which defaults to the maximum context length of the chosen model
     - mem_div determines how small of a set of queries to use when utilizing kv caching to save memory. For example, if the model's maximum context length is 512 and mem_div=8 then 64 query vectors will be used and up to 448 key&value vectors cached
@@ -98,6 +98,7 @@ python train.py --device=cuda
 ### potential future TODOs
 - [x] add a byte-level tokenizer
 - [x] make good assertions in config.py
+- [x] added min_p sampling
 - [ ] go back and make sure model checkpointing is working. at one point it was but i've changed so much since then and haven't bothered using it so i'd bet it's broken
 - [ ] create `hyperparameter_search.ipynb` that knows to cancel a run if it's going over your available vram usage
     - [ ] add a more complicated (regression to derive scaling laws?) analysis to `model_comparison.ipynb` to help us analyze the hyperparameter search
