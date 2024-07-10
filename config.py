@@ -10,7 +10,7 @@ class ModelConfig:
     Yes I know dropout_rate should probably be in TrainConfig but it was easier to implement from here
     """
     ### general hyperparameters
-    dim: int = 64
+    dim: int = 8
     device: str = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu' 
     dropout_rate = 0.1 # percent of neurons to set to 0 during training as a way of adding randomness & improving generalization
     linear_bias: bool = False # whether to use bias weights on our linear layers. Llama3 does not and I'm partial to their choice
@@ -28,16 +28,16 @@ class ModelConfig:
         # does nothing if pos_enc_type=='learnable'
 
     ### tokenizer
-    tokenizer: str = 'byte' # must choose from one of the folders in 'tokenizers/'
+    tokenizer: str = 'bpe_tinyStories' # must choose from one of the folders in 'tokenizers/'
         # current options: 'bpe_tinyStories', 'bpe_fineweb', 'bpe_fineweb-edu', 'byte'
             # it is possible to train a model on a dataset different from what your tokenizer was trained on
             # if you choose 'byte' then vocab_len will be ignored/overridden
-    vocab_len: int = 512 # options can be found in the `models/` sub-folder inside whatever tokenizer you just chose above^
+    vocab_len: int = 2048 # options can be found in the `models/` sub-folder inside whatever tokenizer you just chose above^
         # for `bpe_tinyStories` the options are 512, 1024, 2048
         # for 'bpe_fineWeb' and 'bpe_fineWeb-edu' the options are 512, 1024, 2048, 4096, 8192, 16_384, 32_768
 
     ### Residual Layers
-    num_layers: int = 4 # small models should err on the side of many many layers at the expense of attention & mlp sizes
+    num_layers: int = 1 # small models should err on the side of many many layers at the expense of attention & mlp sizes
     second_resid_norm: bool = False # True adds an extra Norm after the attn & MLP, like in Grok. Only recommended if using RMSNorm
     
     ### Multi-Layer Perceptrion
@@ -119,21 +119,21 @@ class TrainConfig:
         # None defaults to `sample-10BT` for the finewebs
         # this parameter doesn't apply to tinyStoriesV2
     # whether to download all the data (False) or stream it as you need it (True)
-    streaming: bool = False
+    streaming: bool = True
         # tinyStoriesV2 takes up a bit over 2GB and fineweb sample-10BT takes up 28.5GB, so keep that in mind if you set to False
     
     ### batch size hyperparams
     # micro_batch_size * grad_accum_steps = effective batch size
     # micro_batch_size * grad_accum_steps * max_seq_len = total number of tokens per batch
-    micro_batch_size: int = 4
-    grad_accum_steps: int = 16
+    micro_batch_size: int = 2
+    grad_accum_steps: int = 2
         # set grad_accum_steps = 1 to not do gradient accumulation
 
     ### training length
     # total number of batches to run over the course of training
-    max_iters: int = 100 # we'll refer to iterations of batches instead of epochs over the dataset
+    max_iters: int = 50 # we'll refer to iterations of batches instead of epochs over the dataset
     # how often to print out an update on how training is going
-    eval_interval: int = 10#max_iters // 100 # doing this too often slows things down hella but also gives detailed log data
+    eval_interval: int = 5#max_iters // 100 # doing this too often slows things down hella but also gives detailed log data
     # how many samples to take at each evaluation. more means a more accurate loss/perplexity calculation
     eval_samples: int = 1 # this number can slow things down. each sample is almost like doing an extra training iteration
     # how often to save a model checkpoint
