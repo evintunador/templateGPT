@@ -1,7 +1,7 @@
 # templateGPT
 ## about
 **this repo is currently undergoing a re-factoring. it'll likely be functional again in a week or two**
-
+test
 This is the model I edit whenever I want to test a new transformer architecture idea I have. It's designed to be:
 - flexible in that many large changes are tweakable from the config file rather than messing with the code
 - easy to read/edit the code since files are cleanly organized & well commented
