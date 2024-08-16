@@ -73,13 +73,13 @@ class Layer(LoggingModule):
         training: bool,
     ) -> torch.Tensor:
         dx, kv_cache = self.attn(self.pre_attn_norm(x), freqs, mask, cache_len, kv_cache, training)
-        if training: F.dropout(dx, self.dropout_rate)
+        if training: dx = F.dropout(dx, self.dropout_rate)
         if self.second_norm: dx = self.post_attn_norm(dx)
         return dx, kv_cache
 
     @log_io
     def mlp_connect(self, x: torch.Tensor, training: bool) -> torch.Tensor:
         dx = self.mlp(self.pre_mlp_norm(x), training)
-        if training: F.dropout(dx, self.dropout_rate)
+        if training: dx = F.dropout(dx, self.dropout_rate)
         if self.second_norm: dx = self.post_mlp_norm(dx)
         return dx
