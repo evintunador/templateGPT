@@ -121,7 +121,8 @@ class Model(LoggingModule):
             mask = self.mask
             training = True
         else: # inference setup
-            mask = self.mask[:seq_len, :seq_len]
+            # i could totally clean this up a bit rather than keep using self.mask
+            mask = self.mask[:1, :1]
             mask = torch.nn.functional.pad(mask, (cache_len, 0, 0, 0), value=False)
             training = False
 

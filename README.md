@@ -1,6 +1,6 @@
 # templateGPT
 ## about
-**this repo is currently undergoing a re-factoring. it'll likely be fully functional again in a few weeks**
+**this repo is currently undergoing a re-factoring. as of the push on 2024-9-4 basically everything works, but stuff may break over the coming weeks. the goal is to get this capable of completely replicating GPT-2 on multiple GPUs and then start using it the way it was intended (as a template for architecture experiments)**
 
 
 This is the model I edit whenever I want to test a new transformer architecture idea I have. It's designed to be:
@@ -25,7 +25,7 @@ This repo is part of a larger project of mine called [micro-GPT-sandbox](https:/
 3. setup a virtual environment unless you're an agent of chaos
 4. `pip install -r requirements.txt`
 5. edit values in `config.py` to suit your liking. This might involve a lot of trial and error if you don't know what you're doing, either due to errors from incompatible parameter configurations or from going over your available vRAM amount. Checkout the config files for each already trained model to get an idea of what reasonable values look like
-6. Run `pythontrain.py` to train your own version of templateGPT
+6. Run `python train.py` to train your own version of templateGPT
 7. If you ever want to just test out a model you've already made then run the following command. The name of each model is the name of the folder it resides in inside `models/`. The model you run need not match up with the hyperparameters currently in `config.py`, that file is just for setting up training.
 ```
 python inference.py "insert_model_name_here" "prompt"
@@ -67,10 +67,9 @@ python inference.py "insert_model_name_here" "prompt"
 - `config.py`: all of the easily editable model and training settings
 - `inference.py`: run with multiple prompts and edit your settings like so:
 ```
-python inference.py "insert_model_name_here" "prompt 1" "prompt 2" "prompt..." --temp=0.7 --min_p=0.05 --top_k=None --top_p=None --max_len=100 --mem_div=1 --show_tokens
+python inference.py "insert_model_name_here" "prompt 1" "prompt 2" "prompt..." --temp=0.7 --min_p=0.05 --top_k=None --top_p=None --max_len=100 --show_tokens
 ```
     - values shown are defaults, except for max_len which defaults to the maximum context length of the chosen model
-    - mem_div determines how small of a set of queries to use when utilizing kv caching to save memory. For example, if the model's maximum context length is 512 and mem_div=8 then 64 query vectors will be used and up to 448 key&value vectors cached
     - show_tokens returns a list of strings where each string is its own token. Useful for visualizing the tokenizer
 - `model_comparison.ipynb`: open this notebook to compare different models against each other. includes loss curve plots and topk teacher-forcing accuracy rate
 - `model_comparison.py`: functions for comparing models; used in `model_comparison.ipynb`
@@ -82,33 +81,30 @@ python train.py --device=cuda
 ```
 
 ## definite TODOs
+- [ ] add useful stuff from karpathy's nanoGPT
+    - [ ] make it distributed data parallelizable on cuda
+    - [ ] setup downloaded datasets to optionally download as token indices rather than as strings (makes loading them during training faster)
+    - [ ] the benchmark test
+- lambda labs
+    - [ ] figure out how to push-pull from lambda labs
+    - [ ] figure out why nvidia-smi isn't working
+- [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the docs are shorter than the model's maximum context length
+- [x] make kv caching a bool input with only 1 query vector used. i should double check on this
+
+### potential future TODOs
 - [ ] train new tokenizers
     - [x] tinystoriesv2
     - [ ] fineweb
     - [x] fineweb-edu
     - [ ] make it possible to start from a tokenizer as a checkpoint to make a larger tokenizer
-- [ ] add useful stuff from karpathy's nanoGPT
-    - [ ] the benchmark test
-    - [ ] make it parallelizable on cuda
-    - [ ] setup downloaded datasets to optionally download as token indices rather than as strings (makes loading them during training faster)
-- [ ] fix issue where CPU is only using a single core during training on my iMac
-- [ ] figure out why nvidia-smi isn't working on lambda labs
-- [ ] train new models
-- [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the docs are shorter than the model's maximum context length
-
-### potential future TODOs
-- [x] add a byte-level tokenizer
-- [x] make good assertions in config.py
-- [x] added min_p sampling
 - [ ] go back and make sure model checkpointing is working. at one point it was but i've changed so much since then and haven't bothered using it so i'd bet it's broken
 - [ ] create `hyperparameter_search.ipynb` that knows to cancel a run if it's going over your available vram usage
     - [ ] add a more complicated (regression to derive scaling laws?) analysis to `model_comparison.ipynb` to help us analyze the hyperparameter search
 - [ ] add option to continually train pre-existing models & update its training data/hyperparameters accordingly
 - [ ] add automated model comparison analysis by GPT4 like in the [TinyStories](https://arxiv.org/abs/2305.07759) paper into `model_comparison.ipynb`
 - [ ] add sparse/local/windowed attention mask options
-- [ ] add support for byte-level tokenization
-    - should be as simple as adding 259 (= 256 + the 3 special tokens) as a size option and letting any of the regular bpe tokenizers just return those raw bytes
-
+- [ ] switch to [flexAttention](https://pytorch.org/blog/flexattention/)???
+      
 ## how to contribute
 Other than the above TODO lists, appreciated contributions include:
 - bug fixes

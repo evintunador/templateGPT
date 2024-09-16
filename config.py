@@ -15,7 +15,7 @@ class ModelConfig:
     dropout_rate = 0.1 # percent of neurons to set to 0 during training as a way of adding randomness & improving generalization
     linear_bias: bool = False # whether to use bias weights on our linear layers. Llama3 does not and I'm partial to their choice
     out_weight_share: bool = True # whether to share weights between output layer and input embedding layer
-    max_seq_len: int = 128 # 512 is the most my 8gb of ram can handle. I think GPT2 did 1024
+    max_seq_len: int = 16 # 512 is the most my 8gb of ram can handle. I think GPT2 did 1024
     
     ### positional encoding
     # the method to use for helping the model understand the order of tokens.
@@ -59,6 +59,9 @@ class ModelConfig:
     eps: float = 1e-6 # small constant to prevent division by 0. Not really worth editing
 
     def __post_init__(self):
+        """
+        These are just checks to make sure everything works ahead of time. do not edit them unelss you know what you're doing
+        """
         
         # General
         assert isinstance(self.dim, int) and self.dim > 0, "dim must be a positive integer"
@@ -173,6 +176,10 @@ class TrainConfig:
         return middle_section / sum(self.T_mult ** i for i in range(self.num_restarts+1))
 
     def __post_init__(self):
+        """
+        These are just checks to make sure everything works ahead of time. do not edit them unelss you know what you're doing
+        """
+        
         # General 
         assert isinstance(self.model_name, str) and len(self.model_name) > 0, "model_name must be a non-empty string"
     

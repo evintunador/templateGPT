@@ -64,21 +64,13 @@ def generate(
     top_k: int = None, # optionally prevents the model from sampling tokens that don't fit within the list of top k most likely tokens
     top_p: float = None, # optionally prevents the model from sampling tokens that don't fit within the cumsum range
     max_gen_len: int = None, # maximum length you want the model to generate
-    memory_saver_div: int = 1, # defaults to full max_seq_len**2 memory use. probably needs to be power of 2. not all models can take advantage of this
 ):
     """Generate text from a prompt using the model and sampling settings."""
     vocab_len, max_seq_len = tokenizer.vocab_len, model.max_seq_len
-    
-    max_context_window = max_seq_len // memory_saver_div
-    if memory_saver_div != 1:
-        assert ((memory_saver_div & (memory_saver_div-1)) == 0) & (memory_saver_div > 0), \
-        f'memory_saver_div {memory_saver_div} must be power of 2'
-        print(f'max attention matrix size in RAM will be {max_context_window}x{max_seq_len} rather than {max_seq_len}x{max_seq_len}\n')
 
     if type(prompt) == list: tokens_list = [tokenizer.encode(p) for p in prompt]
     elif type(prompt) == str: tokens_list = [tokenizer.encode(prompt)]
     max_prompt_len = max(len(tokens) for tokens in tokens_list)
-    assert max_context_window >= max_prompt_len, 'please decrease memory_saver_div so that the entire initial prompt can fit into kv_cache'
     
     max_gen_len = max_seq_len - max_prompt_len if max_gen_len is None else max_gen_len
     
@@ -88,12 +80,10 @@ def generate(
     tokens = torch.tensor(tokens_padded, device=model.device).to(torch.long) # (batch_size, max_prompt_len)
     
     batch_size = tokens.shape[0]
-    if memory_saver_div != 1:
-        kv_cache = [{ # Initialize kv caches for each layer
-                "k": torch.zeros((batch_size, max_seq_len, model.num_kv_heads, model.head_dim), device=model.device),
-                "v": torch.zeros((batch_size, max_seq_len, model.num_kv_heads, model.head_dim), device=model.device),
-            } for _ in range(model.num_layers)]
-    else: kv_cache = None
+    kv_cache = [{ # Initialize kv caches for each layer
+            "k": torch.zeros((batch_size, max_seq_len, model.num_kv_heads, model.head_dim), device=model.device),
+            "v": torch.zeros((batch_size, max_seq_len, model.num_kv_heads, model.head_dim), device=model.device),
+        } for _ in range(model.num_layers)]
 
     # for keeping track of if/when each sequence outputs an EOS token so that we can end the output
     eos_flags = torch.zeros(batch_size, dtype=torch.bool, device=model.device)
@@ -107,15 +97,18 @@ def generate(
 
         # running the model
         with torch.no_grad():
+            
+            input_token_ids = tokens[:,-1:]
+            
             logits, kv_cache = model(
-                input_token_ids = tokens[:,-max_context_window:], 
+                input_token_ids = input_token_ids,
                 cache_len = cache_len,
                 kv_cache = kv_cache
             )
-
+            
         # Calculate the indices for the current generation step
         indices = torch.tensor([
-            min(i + len(tokens_list[idx]) - 1, max_context_window - 1) for idx in range(batch_size)
+            i + len(tokens_list[idx]) - 1 for idx in range(batch_size)
         ], device=model.device)
           
         # turn the logits into probabilities and sample from them
@@ -132,13 +125,12 @@ def generate(
         for idx in range(batch_size):
             #if not eos_flags[idx]:
             tokens[idx, indices[idx] + 1] = next_tokens[idx]
-                
+          
         # if the model has outputted the eos token for all sequences in the batch, we're done
         if eos_flags.all(): break
 
         # update our kv cache length
-        if tokens.shape[1] >= max_context_window:
-            cache_len += 1
+        cache_len += 1
     
     # Post-processing step to replace all tokens after EOS with padding tokens
     for idx in range(batch_size):
@@ -172,7 +164,6 @@ if __name__ == "__main__":
     parser.add_argument("--top_k", type=int, default=None, help="Top-k filtering value (default: None)")
     parser.add_argument("--top_p", type=float, default=None, help="Top-p filtering value (default: None)")
     parser.add_argument("--max_len", type=int, default=None, help="Maximum generation length")
-    parser.add_argument("--mem_div", type=int, default=1, help="Memory saver divisor (default: 1)")
     parser.add_argument("--show_tokens", action="store_true", help="Display tokenization of the output")
     
     args = parser.parse_args()
@@ -190,8 +181,7 @@ if __name__ == "__main__":
             min_p=args.min_p,
             top_k=args.top_k,
             top_p=args.top_p,
-            max_gen_len=args.max_len,
-            memory_saver_div=args.mem_div
+            max_gen_len=args.max_len
         )
         
         # Print outputs
