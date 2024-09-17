@@ -86,7 +86,7 @@ python train.py --device=cuda
     - [ ] setup downloaded datasets to optionally download as token indices rather than as strings (makes loading them during training faster)
     - [ ] the benchmark test
 - lambda labs
-    - [ ] figure out how to push-pull from lambda labs
+    - [x] figure out how to push-pull from lambda labs
     - [ ] figure out why nvidia-smi isn't working
 - [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the docs are shorter than the model's maximum context length
 - [x] make kv caching a bool input with only 1 query vector used. i should double check on this
