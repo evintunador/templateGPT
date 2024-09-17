@@ -63,7 +63,7 @@ def generate(
     min_p: float = 0.05, # min-p sampling threshold https://arxiv.org/abs/2407.01082
     top_k: int = None, # optionally prevents the model from sampling tokens that don't fit within the list of top k most likely tokens
     top_p: float = None, # optionally prevents the model from sampling tokens that don't fit within the cumsum range
-    max_gen_len: int = None, # maximum length you want the model to generate
+    max_gen_len: int = None # maximum length you want the model to generate
 ):
     """Generate text from a prompt using the model and sampling settings."""
     vocab_len, max_seq_len = tokenizer.vocab_len, model.max_seq_len
@@ -165,12 +165,15 @@ if __name__ == "__main__":
     parser.add_argument("--top_p", type=float, default=None, help="Top-p filtering value (default: None)")
     parser.add_argument("--max_len", type=int, default=None, help="Maximum generation length")
     parser.add_argument("--show_tokens", action="store_true", help="Display tokenization of the output")
+    parser.add_argument("--device", type=str, 
+                        default = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu',
+                        help = "Options are 'cuda' (nvidia gpu), 'mps' (apple silicon), or 'cpu' (any computer)")
     
     args = parser.parse_args()
     
     try:
         # Load the model
-        model, tokenizer, cfg = load_model(args.model)
+        model, tokenizer, cfg = load_model(args.model, args.device)
         
         # Generate text
         outputs = generate(

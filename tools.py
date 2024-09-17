@@ -187,6 +187,6 @@ def load_model(
     
     # Load the saved state dictionary
     path = f'{model_name}/model.pth'
-    model.load_state_dict(torch.load(path, weights_only=True)) 
+    model.load_state_dict(torch.load(path, map_location="cpu"))
 
     return model, tokenizer, cfg
