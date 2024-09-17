@@ -122,6 +122,6 @@ def get_tokenizer(size: int = 32768):
     """
     sizes include 512, 1024, 2048, 4096, 8192, 16384, 32768
     """
-    path = f'custom_tokenizers/bpe_fineweb/models/{size-3}.model'
+    path = f'tokenizers/bpe_fineweb/models/{size-3}.model'
     tokenizer_data = load_tokenizer_data(path)
     return BPE_Tokenizer(tokenizer_data['merges'])

@@ -175,7 +175,7 @@ def load_model(
     cfg.device = device
 
     # the tokenizer
-    imported_objects = import_from_nested_path(['custom_tokenizers', cfg.tokenizer], 'tokenizer', ['get_tokenizer'])
+    imported_objects = import_from_nested_path(['tokenizers', cfg.tokenizer], 'tokenizer', ['get_tokenizer'])
     get_tokenizer = imported_objects.get('get_tokenizer')
     tokenizer = get_tokenizer(size = cfg.vocab_len)
 

@@ -28,7 +28,7 @@ This repo is part of a larger project of mine called [micro-GPT-sandbox](https:/
 6. Run `python train.py` to train your own version of templateGPT
 7. If you ever want to just test out a model you've already made then run the following command. The name of each model is the name of the folder it resides in inside `models/`. The model you run need not match up with the hyperparameters currently in `config.py`, that file is just for setting up training.
 ```
-python inference.py "insert_model_name_here" "prompt"
+python inference.py <insert_model_name_here> "prompt"
 ```
 8. If you've trained multiple models, you can compare them in `model_comparison.ipynb` as long as you remember to use the third cell to specify which models you want to compare. It'll look at loss curves over the course of training and teacher-forcing topk accuracy rate
 9. This step could really go anywhere, but if you're trying to learn how transformers work then along with reading the code in `modules/` you can use `test_modules.ipynb` to visualize how the tensor shapes change. Each cell shows you in detail how a different module or scenario works in terms of how the tensor shapes change as they move through
@@ -36,7 +36,7 @@ python inference.py "insert_model_name_here" "prompt"
 11. If/when you've got a novel transformer architecture edit up and working, send it over to your own template/fork of [micro-GPT-sandbox](https://github.com/evintunador/micro-GPT-sandbox) for easy comparisons against the original templateGPT
 
 ## file structure
-- `custom_tokenizers/`: a folder where you store your tokenizers
+- `tokenizers/`: a folder where you store your tokenizers
     - `bpe_tinyStories/`: a [byte-pair encoding](https://huggingface.co/learn/nlp-course/chapter6/5) tokenizer trained on the first 10k sequences from the [TinyStoriesV2](https://huggingface.co/datasets/noanabeshima/TinyStoriesV2) dataset, which is a fan-made upgrade over the original [TinyStories](https://huggingface.co/datasets/roneneldan/TinyStories)
         - `build.ipynb`: the notebook where i trained the tokenizer models
         - `tokenizer.py`: an overly-simplistic and annoyingly inefficient tokenizer with bos & eos tokens, post-sequence padding, and a `display` function to help you visualize how a given string is broken down into tokens
