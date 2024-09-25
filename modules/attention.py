@@ -33,8 +33,9 @@ class SelfAttention(LoggingModule):
     A flexible self-attention module
     - Use a custom mask of your choice by passing in a mask tensor of dtype torch.bool & shape (keys_seq_len, queries_seq_len)
     - Knows whether to use FlashAttention to speed things up (if you've got a cuda/mps GPU) or regular attention (for CPUs)
+    - Optionally disable causal-ness by just not passing in a mask tensor
     - Works for both training & inference (pass in training:bool to determine whether to perform dropout)
-    - Optionally disable kv caching by just not passing in a kv_cache dictionary
+    - Optionally disable kv caching by just not passing in a kv_cache dictionary & cache_len tensor
     - Optionally disable Rotary Positional Encoding by just not passing in a freqs dictionary
     """
     def __init__(
@@ -53,6 +54,7 @@ class SelfAttention(LoggingModule):
         self.num_kv_heads = num_q_heads if num_kv_heads is None else num_kv_heads
         assert num_q_heads % num_kv_heads == 0, f'num_q_heads must be divisible by num_kv_heads'
         self.head_dim = dim // num_q_heads if head_dim is None else head_dim
+        self.max_seq_len = max_seq_len
         self.dropout_rate = dropout_rate
         self.device = device
 
@@ -75,31 +77,30 @@ class SelfAttention(LoggingModule):
         x: torch.Tensor,
         freqs: dict = None,
         mask: torch.Tensor = None,
-        cache_len: int = None,
+        cache_len: torch.Tensor = None,
         kv_cache: dict = None,
         training: bool = False,
     ) -> torch.Tensor:
         batch_size, seq_len, _ = x.shape
         
-        q, k, v = self.Wq(x), self.Wk(x), self.Wv(x) 
+        q, k, v = self.Wq(x), self.Wk(x), self.Wv(x)
             # (batch_size, seq_len, dim) -> (batch_size, seq_len, num_heads * head_dim)
-            # where q vs k&v can have a different number of heads
+            # where q versus k&v can have a different number of heads
 
         q = q.view(batch_size, seq_len, self.num_q_heads, self.head_dim)
         k = k.view(batch_size, seq_len, self.num_kv_heads, self.head_dim)
         v = v.view(batch_size, seq_len, self.num_kv_heads, self.head_dim)
 
         # you'll probably use RoPE, but if not then this can deactivate itself by just not inputting freqs
-        if freqs is not None: 
-            q, k = self.apply_rotary_pos_emb(q, k, freqs, cache_len)
+        if freqs is not None:
+            if training: # training & inference work differently bc of kv caching
+                q, k = self.apply_rotary_pos_emb(q, k, freqs['sin'], freqs['cos'])
+            else:
+                sin, cos = self.splice_specific_frequencies(q.shape[1], freqs, q.shape[0], cache_len)
+                q, k = self.apply_rotary_pos_emb(q, k, sin, cos)
 
-        # if we're performing inference and using kv caching
-        if (cache_len is not None) & (kv_cache is not None): 
-            kv_cache['k'][:, cache_len : cache_len + seq_len, :] = k
-            kv_cache['v'][:, cache_len : cache_len + seq_len, :] = v
-
-            k = kv_cache['k'][:, : cache_len + seq_len, :] # (batch_size, cache_len + seq_len, num_kv_heads, head_dim)
-            v = kv_cache['v'][:, : cache_len + seq_len, :]
+        if kv_cache is not None: 
+            k, v, kv_cache = self.implement_kv_caching(k, v, kv_cache, cache_len, mask)
 
         # adjusts keys and values to match the query heads count so that attention can be performed
         if self.num_kv_heads != self.num_q_heads:
@@ -108,32 +109,55 @@ class SelfAttention(LoggingModule):
         q = q.transpose(1, 2)  # (batch_size, num_q_heads, seq_len, head_dim)
         k = k.transpose(1, 2)  # (batch_size, num_q_heads, cache_len + seq_len, head_dim)
         v = v.transpose(1, 2)  # (batch_size, num_q_heads, cache_len + seq_len, head_dim)
-
+        
         # perform flash attention if we've got a GPU
         if self.device in ['cuda', 'mps']: 
             scores = self.flash_attention(q, k, v, mask, training)
-        else: 
-            # otherwise we'll do regular inefficient attention
-            logits = self.attend(q, k, training) # (batch_size, num_q_heads, seq_len, cache_len + seq_len)
-            if mask is not None: logits = logits.masked_fill(mask, float('-inf'))  # (batch_size, num_q_heads, seq_len, cache_len + seq_len)
-            scores = self.calc_output(logits, v, training) # (batch_size, n_heads, seq_len, head_dim)
+        else: # AKA if self.device == 'cpu', then we have to manually calculate attention
+            scores = self.regular_attention(q, k, v, mask, training) # (batch_size, n_heads, seq_len, head_dim)
 
         scores = scores.transpose(1, 2).contiguous().view(batch_size, seq_len, -1) # (batch_size, seq_len, n_heads * head_dim)
         output = self.Wo(scores) # (batch_size, seq_len, dim)
         if training: output = F.dropout(output, self.dropout_rate)
         
         return output, kv_cache
+
+    @log_io
+    def splice_specific_frequencies(
+        self, 
+        seq_len: int, 
+        freqs: dict, 
+        batch_size: int, 
+        cache_len: torch.Tensor
+    ) -> (torch.Tensor, torch.Tensor):
+        """
+        selects the correct RoPE frequencies to use given our current stage of kv caching
+        """
+        if seq_len > 1: # we've got as input the initial unpredictable length prompt(s) in our (batched) inference
+            sin = freqs['sin'][:, :seq_len, :, :].to(self.device) 
+            cos = freqs['cos'][:, :seq_len, :, :].to(self.device) # (1, seq_len, 1, head_dim // 2)
+        else: # we're doing successive single-token-per-sequence auto-regressive inference thanks to kv caching
+            # Reshape sin & cos to have the same batch size so that we can select from them later
+            sin = freqs['sin'].expand(batch_size, -1, -1, -1)  # (batch_size, max_seq_len, 1, head_dim)
+            cos = freqs['cos'].expand(batch_size, -1, -1, -1)  # (batch_size, max_seq_len, 1, head_dim) <- 1 is our single token in kv-caching inference
+            
+            # Step 2: Select the correct frequency for each sequence based on cache_len
+            batch_indices = torch.arange(batch_size, device=self.device)
+            sin = sin[batch_indices, cache_len-1, :, :].unsqueeze(1)  # (batch_size, 1, 1, head_dim)
+            cos = cos[batch_indices, cache_len-1, :, :].unsqueeze(1)  # (batch_size, 1, 1, head_dim)
+        return sin, cos
     
     @log_io
-    def apply_rotary_pos_emb(self, q, k, freqs_cis, cache_len):
+    def apply_rotary_pos_emb(
+        self, 
+        q: torch.Tensor, 
+        k: torch.Tensor, 
+        sin: torch.Tensor,
+        cos: torch.Tensor
+    ) -> (torch.Tensor, torch.Tensor):
         """
         calculates rotary positional encodings using real-valued complex arithmetic
         """
-        # selecting the correct frequencies given our kv caching. during training cache_len==0 and q.shape[1]==max_seq_len
-        if cache_len is None: cache_len = 0
-        cos = freqs_cis['cos'][:, cache_len : q.shape[1] + cache_len, :, :].to(q.device) # (1, seq_len, 1, head_dim // 2)
-        sin = freqs_cis['sin'][:, cache_len : q.shape[1] + cache_len, :, :].to(q.device)
-
         # the real component is simple
         q_real = q * cos # (batch_size, seq_len, num_q_heads, head_dim)
         k_real = k * cos # (batch_size, seq_len, num_q_heads, head_dim)
@@ -147,9 +171,54 @@ class SelfAttention(LoggingModule):
         return q, k
         
     @log_io
-    def rotate_half(self, x):
+    def rotate_half(self, x: torch.Tensor) -> torch.Tensor:
         x1, x2 = x.chunk(2, dim=-1)
         return torch.cat((-x2, x1), dim=-1)
+
+    @log_io
+    def implement_kv_caching(
+        self, 
+        k: torch.Tensor, 
+        v: torch.Tensor, 
+        kv_cache: dict, 
+        cache_len: torch.Tensor, 
+        mask: torch.Tensor
+    ) -> (torch.Tensor, torch.Tensor, dict):
+        
+        new_tokens = (mask).sum(dim=1)
+        max_new_tokens = new_tokens.max()
+        
+        kv_cache = self.update_kv_cache(k, v, kv_cache, cache_len, mask, max_new_tokens)
+        k, v = self.use_kv_cache(k, v, kv_cache, max_new_tokens)
+        
+        return k, v, kv_cache
+
+    @log_io
+    def update_kv_cache(self, k, v, kv_cache, cache_len, mask, max_new_tokens) -> dict:
+        batch_size, seq_len = k.shape[0], k.shape[1]
+        
+        if seq_len > 1: # if we're training (full max_seq_len) or doing the initial batched-inference variable-length prompts
+            batch_idx = torch.arange(batch_size).to(self.device).unsqueeze(1).expand(-1, max_new_tokens)
+            seq_idx = torch.arange(max_new_tokens).to(self.device).unsqueeze(0).expand(batch_size, -1)
+                
+            # initial prompt update - during batched inference each prompt may have a different length
+            kv_cache['k'][batch_idx[mask], seq_idx[mask]] = k[batch_idx[mask], seq_idx[mask]]#.unsqueeze(1)
+            kv_cache['v'][batch_idx[mask], seq_idx[mask]] = v[batch_idx[mask], seq_idx[mask]]#.unsqueeze(1)
+            
+        else:
+            # autoregressive update of single-input vector
+            for i, idx in enumerate(cache_len):
+                kv_cache['k'][i, idx-1, ...] = k[i]
+                kv_cache['v'][i, idx-1, ...] = v[i]
+                # need to remember to tensorize this op
+                
+        return kv_cache
+
+    @log_io
+    def use_kv_cache(self, k, v, kv_cache, max_new_tokens) -> (torch.Tensor, torch.Tensor):
+        k = kv_cache['k'][:, :max_new_tokens, :] # (batch_size, max_new_tokens, num_kv_heads, head_dim)
+        v = kv_cache['v'][:, :max_new_tokens, :]
+        return k, v
         
     @log_io
     def match_headcount(self, k: torch.Tensor, v: torch.Tensor) -> (torch.Tensor, torch.Tensor):
@@ -164,25 +233,59 @@ class SelfAttention(LoggingModule):
         mask: torch.Tensor = None, 
         training: bool = False
     ) -> torch.tensor:
-        """ 
+        """
         Flash-attention is a more efficient version of attention. Only gets called if you're using a GPU
         https://arxiv.org/abs/2205.14135
         https://arxiv.org/abs/2307.08691
         
         this is a separate function despite being so simple only for the purpose of easy display in `test_modules.ipynb`
         """
-        if mask is not None:
-            # we flip the mask bool values because the function expects True -> "let the model see this token" and False -> "mask this token"
-            return F.scaled_dot_product_attention(q, k, v, attn_mask = mask.logical_not() , dropout_p = self.dropout_rate if training else 0.0)
-        else:
+        if mask is None:
             return F.scaled_dot_product_attention(q,k,v, dropout_p = self.dropout_rate if training else 0.0)
+        
+        if not training:
+            # during inference our mask will be (batch_size, seq_len) so we need to adjust the shape to project correctly
+            if not training: mask = self.adjust_inference_mask(mask, q.shape[1], q.shape[2], k.shape[2])
+            
+        # during training the mask size would be (max_seq_len, max_seq_len) which wouldn't need to be adjusted
+        return F.scaled_dot_product_attention(q, k, v, attn_mask = mask, dropout_p = self.dropout_rate if training else 0.0)
 
+    @log_io
+    def regular_attention(
+        self, 
+        q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, 
+        mask: torch.Tensor = None, 
+        training: bool = False
+    ) -> torch.tensor:
+        # first up we compare queries & keys
+        logits = self.attend(q, k, training) # (batch_size, num_q_heads, seq_len, cache_len + seq_len)
+        print('logits:\n', logits)
+            
+        if mask is not None: 
+            # if doing inference, the mask will be a weird shape we've gotta adjust
+            if mask.shape[0] != mask.shape[1]: #not training: 
+                # i think this condition doesn't work for the case where the longest input prompt len == batch_size
+                
+                mask = self.adjust_inference_mask(mask, q.shape[1], q.shape[2], k.shape[2])
+
+            # here we mask out all the future-values
+            logits = logits.masked_fill(~mask, float('-inf'))  # (batch_size, num_q_heads, seq_len, cache_len + seq_len)
+            print('logits:\n', logits)
+
+        # and how using out attention scores we grab the relevant values
+        scores = self.project_values(logits, v, training) # (batch_size, n_heads, seq_len, head_dim)
+        return scores
+            
     @log_io
     def attend(self, q: torch.Tensor, k: torch.Tensor, training: bool = False) -> torch.Tensor:
         return torch.matmul(q, k.transpose(2, 3)) * (self.head_dim ** -0.5) # (batch_size, num_q_heads, seq_len, cache_len + seq_len)
+
+    @log_io
+    def adjust_inference_mask(self, mask: torch.Tensor, num_heads: int, q_seq_len: int, k_seq_len: int) -> torch.tensor:
+        return mask.unsqueeze(1).unsqueeze(1).expand(-1, num_heads, q_seq_len, k_seq_len)
     
     @log_io
-    def calc_output(self, logits: torch.Tensor, v: torch.Tensor, training: bool = False) -> torch.Tensor:
+    def project_values(self, logits: torch.Tensor, v: torch.Tensor, training: bool = False) -> torch.Tensor:
         scores = F.softmax(logits, dim=-1)
         if training: scores = F.dropout(scores, self.dropout_rate)
         return scores @ v # (batch_size, n_heads, seq_len, head_dim)

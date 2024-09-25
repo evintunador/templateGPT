@@ -43,8 +43,8 @@ class Model(LoggingModule):
         self.scale = cfg.dim ** 0.5 if cfg.scale_first_resid else 1.0
 
         # the causal attention mask
-        self.mask = torch.ones(cfg.max_seq_len, cfg.max_seq_len, dtype=torch.bool, device=cfg.device).triu(diagonal=1)
-            # True -> "mask this token" while False -> "Let the model see this token"
+        #self.mask = torch.ones(cfg.max_seq_len, cfg.max_seq_len, dtype=torch.bool, device=cfg.device).tril()
+            # False -> "mask this token" while True -> "Let the model see this token"
 
         # the model itself
         self.layers = nn.ModuleList(Layer(cfg) for _ in range(cfg.num_layers))
@@ -104,6 +104,7 @@ class Model(LoggingModule):
         input_token_ids: torch.Tensor, 
         cache_len: int = None,
         kv_cache: list = None,
+        mask: torch.Tensor = None,
         target_token_ids: torch.Tensor = None,
     ) -> (torch.Tensor, torch.Tensor):
         """
@@ -116,27 +117,30 @@ class Model(LoggingModule):
         batch_size, seq_len = input_token_ids.shape
 
         if target_token_ids is not None: # training setup
+            training = True
             assert input_token_ids.shape == target_token_ids.shape
             assert seq_len == self.max_seq_len
-            mask = self.mask
-            training = True
+            assert (kv_cache is None) and (cache_len is None)
+            #mask = self.mask
+            mask = torch.ones(self.max_seq_len, self.max_seq_len, dtype=torch.bool, device=self.device).tril()
+                # False -> "mask this token" while True -> "Let the model see this token"
         else: # inference setup
-            # i could totally clean this up a bit rather than keep using self.mask
-            mask = self.mask[:1, :1]
-            mask = torch.nn.functional.pad(mask, (cache_len, 0, 0, 0), value=False)
             training = False
+            # maybe i could calculate cache_len here from the inputted mask? 
+                # or better yet from kv cache? that'd allow ppl to make a transformer that's not causal
 
         # setting up our positional encoding
         if self.pos_enc_type == 'learnable':
-            pos = torch.arange(0, seq_len, dtype=torch.long, device=self.device) # shape (t)
-            pos_emb = self.pos_embedder(pos)
+            pos = torch.arange(0, seq_len, dtype=torch.long, device=self.device) # shape (seq_len)
+            pos_emb = self.pos_embedder(pos) # shape (seq_len, dim)
             freqs = None # make sure not to pass in any RoPE frequencies into the model
         elif self.pos_enc_type == 'Sinusoidal':
-            pos_emb = self.pos_embedding[:seq_len, :].unsqueeze(0).to(self.device)
+            pos_emb = self.pos_embedding[:seq_len, :].unsqueeze(0).to(self.device) # shape (seq_len, dim)
             freqs = None # make sure not to pass in any RoPE frequencies into the model
         elif self.pos_enc_type == 'RoPE':
             # precomputing our RoPE frequencies
-            freqs = self.precompute_freqs()
+            freqs = self.precompute_freqs() 
+                # dict {'sin': shape (1, max_seq_len, 1, head_dim), 'cos': shape (1, max_seq_len, 1, head_dim)}
         else:
             # bc of the InputError in the __init__ you shouldn't be able to get to here
             # but I guess if you did then you'd have a model with no awareness of position
@@ -164,7 +168,7 @@ class Model(LoggingModule):
         
         # the final output of the model
         logits = self.output(self.final_norm(x)) # (batch_size, seq_len, vocab_len)
-
+        
         if training:
             loss = self.criterion(
                 logits.view(batch_size * seq_len, self.vocab_len),
@@ -172,5 +176,5 @@ class Model(LoggingModule):
             )
             return logits, loss
         else: 
-            # if we're doing inference, the second variable to be outputted will be the updated kv_cache
+            # if we're doing inference, the second variable to be outputted will instead be the updated kv_cache 
             return logits, kv_cache
