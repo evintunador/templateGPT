@@ -1,6 +1,6 @@
 # templateGPT
 ## about
-**this repo is currently not functional and paused in limbo while I study code for an upcoming interview. eventually if/when I do get back to it the goal is to get this capable of completely replicating GPT-2 (or a GPT-2 sized version of Llama3.1) on multiple GPUs and then start using it the way it was intended (as a template for architecture experiments). If you look back at older commits there should be some from maybe around the time that I released [this video](https://www.youtube.com/watch?v=s9kQvDsWnbc) that are working but do not have all the features I'd like**
+**this repo does not currently implement every feature I would like in order for it to be fully able to do what it was meant for. eventually if/when I do get back to it the goal is to get this capable of completely replicating GPT-2 (or a GPT-2 sized version of Llama3.1) on multiple GPUs and then start using it as a template for architecture experiments.**
 
 
 This is the model I edit whenever I want to test a new transformer architecture idea I have. It's designed to be:
@@ -80,31 +80,32 @@ python train.py --device=cuda
 ```
 
 ## definite TODOs
-- [ ] fix kv caching, which currenlty is not functional and causing everything else to break. That feature really needs a complete refactor from scratch based on the code in [karpathy's nanoLlama31](https://github.com/karpathy/nano-llama31) because what i've got now is an overly convoluted mess where i just shot myself in the foot at every turn
-- [ ] add useful stuff from karpathy's nanoGPT
+- [ ] remove `logging.py` since when i made that i didn't know what a debugger in an IDE was so really it's kinda useless
+    - [ ] take the code & turn it into unit tests inside a `__main__` clause of each module
+- [ ] add useful stuff from karpathy's [nanoGPT](https://github.com/karpathy/nanoGPT)
     - [ ] make it distributed data parallelizable on cuda
     - [ ] setup downloaded datasets to optionally download as token indices rather than as strings (makes loading them during training faster)
-    - [ ] the benchmark test
-- lambda labs
-    - [x] figure out how to push-pull from lambda labs
-    - [x] figure out why nvidia-smi isn't working
-- [x] make kv caching a bool input with only 1 query vector used. i should double check on this
+    - [ ] add the benchmark test
 - [ ] train new tokenizers
     - [x] tinystoriesv2
     - [ ] fineweb
     - [x] fineweb-edu
     - [ ] make it possible to start from a tokenizer as a checkpoint to make a larger tokenizer
 - [ ] figure out random seed & exact replication versus shuffling a dataset
-
-### potential future TODOs
+- [ ] implement kv caching based on the code in [karpathy's nanoLlama31](https://github.com/karpathy/nano-llama31) 
+- [ ] add batched inference to `inference.py`
 - [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the docs are shorter than the model's maximum context length
 - [ ] go back and make sure model checkpointing is working. at one point it was but i've changed so much since then and haven't bothered using it so i'd bet it's broken
+- [ ] make dropout at different places optional [display of gpt2 vs llama w/ dropout](https://media.licdn.com/dms/image/v2/D5622AQEBPGmatFddzQ/feedshare-shrink_2048_1536/feedshare-shrink_2048_1536/0/1727097580150?e=1730332800&v=beta&t=6GiWyRnpzGyOJB4cmbsgapGioeOZqa0jYCx50o2__24)
+- [ ] parallelize that one part of teh attention mechanism that's currently a for loop
+
+### potential future TODOs
 - [ ] use https://blog.eleuther.ai/mutransfer to set hyperparametrs?
 - [ ] add option to continually train pre-existing models & update its training data/hyperparameters accordingly
 - [ ] add automated model comparison analysis by GPT4 like in the [TinyStories](https://arxiv.org/abs/2305.07759) paper into `model_comparison.ipynb`
 - [ ] add sparse/local/windowed attention mask options
 - [ ] switch to [flexAttention](https://pytorch.org/blog/flexattention/)???
-- [ ] make dropout at different places optional [display of gpt2 vs llama w/ dropout](https://media.licdn.com/dms/image/v2/D5622AQEBPGmatFddzQ/feedshare-shrink_2048_1536/feedshare-shrink_2048_1536/0/1727097580150?e=1730332800&v=beta&t=6GiWyRnpzGyOJB4cmbsgapGioeOZqa0jYCx50o2__24)
+- [ ] take advantage of [torchao](https://pytorch.org/blog/pytorch-native-architecture-optimization/?utm_content=309679619&utm_medium=social&utm_source=twitter&hss_channel=tw-776585502606721024)???
       
 ## how to contribute
 Other than the above TODO lists, appreciated contributions include:

@@ -43,7 +43,7 @@ class Model(LoggingModule):
         self.scale = cfg.dim ** 0.5 if cfg.scale_first_resid else 1.0
 
         # the causal attention mask
-        #self.mask = torch.ones(cfg.max_seq_len, cfg.max_seq_len, dtype=torch.bool, device=cfg.device).tril()
+        self.mask = torch.ones(cfg.max_seq_len, cfg.max_seq_len, dtype=torch.bool, device=cfg.device).tril()
             # False -> "mask this token" while True -> "Let the model see this token"
 
         # the model itself
@@ -102,9 +102,6 @@ class Model(LoggingModule):
     def forward(
         self, 
         input_token_ids: torch.Tensor, 
-        cache_len: int = None,
-        kv_cache: list = None,
-        mask: torch.Tensor = None,
         target_token_ids: torch.Tensor = None,
     ) -> (torch.Tensor, torch.Tensor):
         """
@@ -120,14 +117,10 @@ class Model(LoggingModule):
             training = True
             assert input_token_ids.shape == target_token_ids.shape
             assert seq_len == self.max_seq_len
-            assert (kv_cache is None) and (cache_len is None)
-            #mask = self.mask
-            mask = torch.ones(self.max_seq_len, self.max_seq_len, dtype=torch.bool, device=self.device).tril()
-                # False -> "mask this token" while True -> "Let the model see this token"
+            mask = self.mask
         else: # inference setup
             training = False
-            # maybe i could calculate cache_len here from the inputted mask? 
-                # or better yet from kv cache? that'd allow ppl to make a transformer that's not causal
+            mask = self.mask[:seq_len, :seq_len]
 
         # setting up our positional encoding
         if self.pos_enc_type == 'learnable':
@@ -155,16 +148,7 @@ class Model(LoggingModule):
         
         # run through the model's layers
         for i, layer in enumerate(self.layers):
-            x, kv_cache_i = layer(
-                x, 
-                freqs, 
-                mask, 
-                cache_len,
-                kv_cache[i] if kv_cache is not None else None,
-                training
-            )
-            # update the kv cache
-            if kv_cache is not None: kv_cache[i] = kv_cache_i 
+            x = layer(x, freqs, mask, training)
         
         # the final output of the model
         logits = self.output(self.final_norm(x)) # (batch_size, seq_len, vocab_len)
@@ -176,5 +160,4 @@ class Model(LoggingModule):
             )
             return logits, loss
         else: 
-            # if we're doing inference, the second variable to be outputted will instead be the updated kv_cache 
-            return logits, kv_cache
+            return logits, None
