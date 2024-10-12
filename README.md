@@ -72,7 +72,7 @@ python inference.py "insert_model_name_here" "prompt 1" "prompt 2" "prompt..." -
 ```
 - `model_comparison.ipynb`: open this notebook to compare different models against each other. includes loss curve plots and topk teacher-forcing accuracy rate
 - `model_comparison.py`: functions for comparing models; used in `model_comparison.ipynb`
-- `test_modules.ipynb`: creates easy printouts that allow you to follow the progression of tensor shapes for demonstration & debugging purposes of all the `loggingmodule`s in `modules/`. If you're building new modules for a novel architecture idea you have then this notebook will be of extreme value to you in debugging & visualization. Also includes visualizations of the learning rate scheduler and how a given piece of text is tokenized with your chozen tokenizer
+- `view_modules.ipynb`: creates easy printouts that allow you to follow the progression of tensor shapes for demonstration & debugging purposes of all the `loggingmodule`s in `modules/`. If you're building new modules for a novel architecture idea you have then this notebook will be of extreme value to you in debugging & visualization. Also includes visualizations of the learning rate scheduler and how a given piece of text is tokenized with your chozen tokenizer
 - `tools.py`: A variety of functions & classes that don't fit elsewhere and/or are used by more than one of the jupyter notebooks. I should prolly find a better way to organize these
 - `train.py`: first edit `config.py` then run this file to train a model like so:
 ```
@@ -80,8 +80,7 @@ python train.py --device=cuda
 ```
 
 ## definite TODOs
-- [ ] remove `logging.py` since when i made that i didn't know what a debugger in an IDE was so really it's kinda useless
-    - [ ] take the code & turn it into unit tests inside a `__main__` clause of each module
+- [ ] decrease reliance on `logging.py` by creating tests for each module
 - [ ] add useful stuff from karpathy's [nanoGPT](https://github.com/karpathy/nanoGPT)
     - [ ] make it distributed data parallelizable on cuda
     - [ ] setup downloaded datasets to optionally download as token indices rather than as strings (makes loading them during training faster)
