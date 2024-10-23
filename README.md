@@ -22,7 +22,7 @@ This repo is part of a larger project of mine called [micro-GPT-sandbox](https:/
 ## getting started
 1. clone the repository
 2. `cd` to the folder
-3. setup a virtual environment unless you're an agent of chaos
+3. setup a virtual environment unless you're an agent of chaos. Use python 3.12.4; pytorch doesn't like 3.13
 4. `pip install -r requirements.txt`
 5. edit values in `config.py` to suit your liking. This might involve a lot of trial and error if you don't know what you're doing, either due to errors from incompatible parameter configurations or from going over your available vRAM amount. Checkout the config files for each already trained model to get an idea of what reasonable values look like
 6. Run `python train.py` to train your own version of templateGPT
@@ -105,6 +105,7 @@ python train.py --device=cuda
 - [ ] add sparse/local/windowed attention mask options
 - [ ] switch to [flexAttention](https://pytorch.org/blog/flexattention/)???
 - [ ] take advantage of [torchao](https://pytorch.org/blog/pytorch-native-architecture-optimization/?utm_content=309679619&utm_medium=social&utm_source=twitter&hss_channel=tw-776585502606721024)???
+- [ ] switch big dataset from fineweb to [TxT360](https://huggingface.co/datasets/LLM360/TxT360)
       
 ## how to contribute
 Other than the above TODO lists, appreciated contributions include:
