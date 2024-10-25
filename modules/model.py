@@ -18,10 +18,6 @@ class Model(LoggingModule):
         self.vocab_len = cfg.vocab_len
         self.dropout_rate = cfg.dropout_rate
 
-        # the generate() function in inference.py references these values to build kv cache
-        self.head_dim = cfg.head_dim 
-        self.num_kv_heads = cfg.num_kv_heads
-
         ### positional encodings
         self.pos_enc_type = cfg.pos_enc_type
         if cfg.pos_enc_type == 'learnable': # learnable, like in GPT-2
@@ -50,7 +46,7 @@ class Model(LoggingModule):
         self.layers = nn.ModuleList(Layer(cfg) for _ in range(cfg.num_layers))
 
         # the output projection
-        self.final_norm = Norm(cfg.dim, cfg.norm_type, cfg.norm_affine, cfg.norm_bias, cfg.eps)
+        self.final_norm = Norm(cfg.dim, cfg.norm_type, cfg.norm_affine, cfg.norm_bias, cfg.eps, cfg.device)
         self.output = nn.Linear(cfg.dim, self.vocab_len, bias=False, device=cfg.device)
 
         # optionally making the output linear layer tie weights to the input embedding matrix

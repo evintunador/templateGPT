@@ -14,7 +14,13 @@ class Layer(LoggingModule):
         self.dropout_rate = cfg.dropout_rate
 
         # attention connection
-        self.pre_attn_norm = Norm(cfg.dim, cfg.norm_type, cfg.norm_affine, cfg.norm_bias, cfg.eps)
+        self.pre_attn_norm = Norm(
+            cfg.dim, 
+            cfg.norm_type, 
+            cfg.norm_affine, cfg.norm_bias, 
+            cfg.eps, 
+            cfg.device
+        )
         self.attn = SelfAttention(
             cfg.dim, cfg.head_dim,
             cfg.num_q_heads, cfg.num_kv_heads,
@@ -24,10 +30,22 @@ class Layer(LoggingModule):
             cfg.device
         )
         if self.second_norm: 
-            self.post_attn_norm = Norm(cfg.dim, cfg.norm_type, cfg.norm_affine, cfg.norm_bias, cfg.eps)
+            self.post_attn_norm = Norm(
+                cfg.dim, 
+                cfg.norm_type, 
+                cfg.norm_affine, cfg.norm_bias, 
+                cfg.eps, 
+                cfg.device
+            )
 
         # feedforward connection
-        self.pre_mlp_norm = Norm(cfg.dim, cfg.norm_type, cfg.norm_affine, cfg.norm_bias, cfg.eps) 
+        self.pre_mlp_norm = Norm(
+            cfg.dim, 
+            cfg.norm_type, 
+            cfg.norm_affine, cfg.norm_bias, 
+            cfg.eps, 
+            cfg.device
+        ) 
         # ensures mlp_hidden_mult maintains the same parameter count if gated == true
         mult = cfg.mlp_hidden_mult * 2/3 if cfg.mlp_gated else cfg.mlp_hidden_mult
         self.mlp = MLP(
@@ -41,7 +59,13 @@ class Layer(LoggingModule):
             cfg.device
         )
         if self.second_norm: 
-            self.post_mlp_norm = Norm(cfg.dim, cfg.norm_type, cfg.norm_affine, cfg.norm_bias, cfg.eps)
+            self.post_mlp_norm = Norm(
+                cfg.dim, 
+                cfg.norm_type, 
+                cfg.norm_affine, cfg.norm_bias, 
+                cfg.eps, 
+                cfg.device
+            )
 
     def get_num_params(self):
         """ Return the number of parameters in the module """
