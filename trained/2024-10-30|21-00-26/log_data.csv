@@ -1,2 +1,0 @@
-Step,Time Elapsed,Tokens Per Second,Train Loss,Validation Loss,Perplexity,Learning Rate,Norm
-1,0.5,1000,2.0,2.1,8.2,0.001,0.5
