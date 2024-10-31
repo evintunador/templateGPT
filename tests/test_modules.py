@@ -21,15 +21,21 @@ def cfg():
 def tcfg():
     return TrainConfig()
 
-@pytest.mark.parametrize("norm_type", ["RMSNorm", "LayerNorm", "CosineNorm"])
-@pytest.mark.parametrize("device", ["cuda", "mps", "cpu"])
-def test_norm(cfg, tcfg, norm_type, device):
-    """Test the Norm module"""
-    # Skip if device not available
+@pytest.fixture
+def check_device(request):
+    """Helper fixture to skip tests if the requested device is not available."""
+    device = request.param
     if device == 'cuda' and not torch.cuda.is_available():
         pytest.skip("CUDA is not available")
     if device == 'mps' and not torch.backends.mps.is_available():
         pytest.skip("MPS is not available")
+    return device
+
+@pytest.mark.parametrize("norm_type", ["RMSNorm", "LayerNorm", "CosineNorm"])
+@pytest.mark.parametrize("check_device", ["cuda", "mps", "cpu"], indirect=True)
+def test_norm(cfg, tcfg, norm_type, check_device):
+    """Test the Norm module"""
+    device = check_device
 
     module = Norm(
         dim=cfg.dim,
@@ -48,14 +54,9 @@ def test_norm(cfg, tcfg, norm_type, device):
 
 @pytest.mark.parametrize("gated", [True, False])
 @pytest.mark.parametrize("nonlinearity", ["GeLU", "SiLU", "ReLU", "Mish"])
-@pytest.mark.parametrize("device", ["cuda", "mps", "cpu"])
-def test_mlp_gated(cfg, tcfg, gated, nonlinearity, device):
+@pytest.mark.parametrize("check_device", ["cuda", "mps", "cpu"], indirect=True)
+def test_mlp_gated(cfg, tcfg, gated, nonlinearity, check_device):
     """Test the MLP module"""
-    # Skip if device not available
-    if device == 'cuda' and not torch.cuda.is_available():
-        pytest.skip("CUDA is not available")
-    if device == 'mps' and not torch.backends.mps.is_available():
-        pytest.skip("MPS is not available")
 
     module = MLP(
         input_dim=cfg.dim,
@@ -65,23 +66,19 @@ def test_mlp_gated(cfg, tcfg, gated, nonlinearity, device):
         gated=gated,
         bias=cfg.linear_bias,
         dropout_rate=cfg.dropout_rate,
-        device=device
+        device=check_device
     )
 
-    x = torch.randn(tcfg.micro_batch_size, cfg.max_seq_len, cfg.dim).to(device)
+    x = torch.randn(tcfg.micro_batch_size, cfg.max_seq_len, cfg.dim).to(check_device)
     output = module(x)
 
     assert output.shape == x.shape, "Output shape should match input shape."
-    assert output.device.type == device, "Output device mismatch"
+    assert output.device.type == check_device, "Output device mismatch"
 
-@pytest.mark.parametrize("device", ["cuda", "mps", "cpu"])
-def test_precompute_rotary_frequencies(cfg, device):
+@pytest.mark.parametrize("check_device", ["cuda", "mps", "cpu"], indirect=True)
+def test_precompute_rotary_frequencies(cfg, check_device):
     """Test the PrecomputeRotaryFrequencies module."""
-    # Skip if device not available
-    if device == 'cuda' and not torch.cuda.is_available():
-        pytest.skip("CUDA is not available")
-    if device == 'mps' and not torch.backends.mps.is_available():
-        pytest.skip("MPS is not available")
+    device = check_device
 
     precompute_freqs = PrecomputeRotaryFrequencies(
         head_dim=cfg.head_dim,
@@ -98,17 +95,13 @@ def test_precompute_rotary_frequencies(cfg, device):
     assert freqs['sin'].device.type == device
     assert freqs['cos'].device.type == device
 
-@pytest.mark.parametrize("device", ["cuda", "mps", "cpu"])
 @pytest.mark.parametrize("training", [True, False])
 @pytest.mark.parametrize("use_rotary", [True, False])
 @pytest.mark.parametrize("use_mask", [True, False])
-def test_self_attention(cfg, tcfg, device, training, use_rotary, use_mask):
+@pytest.mark.parametrize("check_device", ["cuda", "mps", "cpu"], indirect=True)
+def test_self_attention(cfg, tcfg, check_device, training, use_rotary, use_mask):
     """Test the SelfAttention module under different configurations."""
-    # Skip if device not available
-    if device == 'cuda' and not torch.cuda.is_available():
-        pytest.skip("CUDA is not available")
-    if device == 'mps' and not torch.backends.mps.is_available():
-        pytest.skip("MPS is not available")
+    device = check_device
 
     # Initialize module
     module = SelfAttention(
@@ -160,19 +153,14 @@ def test_self_attention(cfg, tcfg, device, training, use_rotary, use_mask):
         # Verify rotary embeddings were applied (can check internal states or patterns)
         pass
 
-
-@pytest.mark.parametrize("device", ["cuda", "mps", "cpu"])
 @pytest.mark.parametrize("training", [True, False])
 @pytest.mark.parametrize("use_rotary", [True, False])
 @pytest.mark.parametrize("use_mask", [True, False])
 @pytest.mark.parametrize("use_second_norm", [True, False])
-def test_layer(cfg, tcfg, device, training, use_rotary, use_mask, use_second_norm):
+@pytest.mark.parametrize("check_device", ["cuda", "mps", "cpu"], indirect=True)
+def test_layer(cfg, tcfg, check_device, training, use_rotary, use_mask, use_second_norm):
     """Test the transformer layer module under different configurations."""
-    # Skip if device not available
-    if device == 'cuda' and not torch.cuda.is_available():
-        pytest.skip("CUDA is not available")
-    if device == 'mps' and not torch.backends.mps.is_available():
-        pytest.skip("MPS is not available")
+    device = check_device
 
     # since Layer takes in the whole config we've gotta change values
     cfg.second_resid_norm = use_second_norm
@@ -219,18 +207,14 @@ def test_layer(cfg, tcfg, device, training, use_rotary, use_mask, use_second_nor
         # Verify rotary embeddings were applied (can check internal states or patterns)
         pass
 
-@pytest.mark.parametrize("device", ["cuda", "mps", "cpu"])
 @pytest.mark.parametrize("training", [True, False])
 @pytest.mark.parametrize("num_layers", [2, 4])
 @pytest.mark.parametrize("pos_enc_type", ['learnable', 'Sinusoidal', 'RoPE'])
 @pytest.mark.parametrize("out_weight_share", [True, False])
-def test_layer(cfg, tcfg, device, training, num_layers, pos_enc_type, out_weight_share):
+@pytest.mark.parametrize("check_device", ["cuda", "mps", "cpu"], indirect=True)
+def test_model(cfg, tcfg, check_device, training, num_layers, pos_enc_type, out_weight_share):
     """Test the entire model under different configurations."""
-    # Skip if device not available
-    if device == 'cuda' and not torch.cuda.is_available():
-        pytest.skip("CUDA is not available")
-    if device == 'mps' and not torch.backends.mps.is_available():
-        pytest.skip("MPS is not available")
+    device = check_device
 
     # since Model takes in the whole config we've gotta change values
     cfg.num_layers = num_layers

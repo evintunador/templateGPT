@@ -7,7 +7,7 @@ This is the model I edit whenever I want to test a new transformer architecture 
 - flexible in that many large changes are tweakable from the config file rather than messing with the code
 - easy to read/edit the code since files are cleanly organized & well commented
 - well suited for training models in the 1-10m parameter range on a CPU or the 100m-1b parameter range on a GPU without editing any code, just the config file
-- easy to visualize/demonstrate what's happening in the progression of tensor shapes for learning & debugging purposes (thanks to our custom `LoggingModule.py` and `test_modules.ipynb`)
+- easy to visualize/demonstrate what's happening in the progression of tensor shapes for learning & debugging purposes (thanks to our custom `LoggingModule.py` and `view_modules.ipynb`)
 - almost as efficient as Andrej Karpathy's [nanoGPT](https://github.com/karpathy/nanoGPT) despite everything we've added
 - up to date with the most recent SotA architecture, namely Llama 3.1 (Karpathy's [nanoGPT](https://github.com/karpathy/nanoGPT) is based on the very old GPT2 and his [nanoLlama31](https://github.com/karpathy/nano-llama31) library is built for fine-tuning the full 8b size rather than pre-training 1m-1b sized models)
 
@@ -31,8 +31,8 @@ This repo is part of a larger project of mine called [micro-GPT-sandbox](https:/
 python inference.py <insert_model_name_here> "prompt"
 ```
 8. If you've trained multiple models, you can compare them in `model_comparison.ipynb` as long as you remember to use the third cell to specify which models you want to compare. It'll look at loss curves over the course of training and teacher-forcing topk accuracy rate
-9. This step could really go anywhere, but if you're trying to learn how transformers work then along with reading the code in `modules/` you can use `test_modules.ipynb` to visualize how the tensor shapes change. Each cell shows you in detail how a different module or scenario works in terms of how the tensor shapes change as they move through
-10. If/when you become confident to mess with the actual code yourself and test out a novel architecture idea you've got, head on over into `modules/` and get to work. While you're doing this, make sure to use `LoggingModule` instead of `nn.module` and put `@log_io` before every class function you make so that you can use `test_modules.ipynb` for easy visualization/debugging. 
+9. This step could really go anywhere, but if you're trying to learn how transformers work then along with reading the code in `modules/` you can use `view_modules.ipynb` to visualize how the tensor shapes change. Each cell shows you in detail how a different module or scenario works in terms of how the tensor shapes change as they move through
+10. If/when you become confident to mess with the actual code yourself and test out a novel architecture idea you've got, head on over into `modules/` and get to work. While you're doing this, make sure to use `LoggingModule` instead of `nn.module` and put `@log_io` before every class function you make so that you can use `view_modules.ipynb` for easy visualization/debugging. 
 11. If/when you've got a novel transformer architecture edit up and working, send it over to your own template/fork of [micro-GPT-sandbox](https://github.com/evintunador/micro-GPT-sandbox) for easy comparisons against the original templateGPT (micro-GPT-sandbox is currently in an even less finished state than this repo)
 
 ## file structure
@@ -65,6 +65,7 @@ python inference.py <insert_model_name_here> "prompt"
         - `log_data.csv`: a record of loss and a couple other key metrics over the course of training
     - `GPT2_1m_atto/`: a 1m parameter model trained for 2k iterations with a batch size of 64 for a total of 128k sequences (tinyStoriesV2 dataset is ~2.76 million sequences, so less than 5\% of the available dataset) and designed to resemble the architecture of [GPT2](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf)/[nanoGPT](https://github.com/karpathy/nanoGPT)
         - `...`
+- `tests/`: a collection of pytest tests. Currently only `test_modules.py` is actually working; the rest are just first drafts written by claude which have not yet been looked at.
 - `config.py`: all of the easily editable model and training settings
 - `inference.py`: run with multiple prompts and edit your settings like so:
 ```
@@ -80,32 +81,33 @@ python train.py --device=cuda
 ```
 
 ## definite TODOs
-- [ ] decrease reliance on `logging.py` by creating tests for each module
 - [ ] add useful stuff from karpathy's [nanoGPT](https://github.com/karpathy/nanoGPT)
     - [ ] make it distributed data parallelizable on cuda
     - [ ] setup downloaded datasets to optionally download as token indices rather than as strings (makes loading them during training faster)
     - [ ] add the benchmark test
-- [ ] train new tokenizers
-    - [x] tinystoriesv2
-    - [ ] fineweb
-    - [x] fineweb-edu
-    - [ ] make it possible to start from a tokenizer as a checkpoint to make a larger tokenizer
-- [ ] figure out random seed & exact replication versus shuffling a dataset
-- [ ] implement kv caching based on the code in [karpathy's nanoLlama31](https://github.com/karpathy/nano-llama31) 
-- [ ] add batched inference to `inference.py`
-- [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the docs are shorter than the model's maximum context length
 - [ ] go back and make sure model checkpointing is working. at one point it was but i've changed so much since then and haven't bothered using it so i'd bet it's broken
-- [ ] make dropout at different places optional [display of gpt2 vs llama w/ dropout](https://media.licdn.com/dms/image/v2/D5622AQEBPGmatFddzQ/feedshare-shrink_2048_1536/feedshare-shrink_2048_1536/0/1727097580150?e=1730332800&v=beta&t=6GiWyRnpzGyOJB4cmbsgapGioeOZqa0jYCx50o2__24)
-- [ ] parallelize that one part of teh attention mechanism that's currently a for loop
+- [ ] make dropout at different places optional [(see display of gpt2 vs llama w/ dropout)](https://media.licdn.com/dms/image/v2/D5622AQEBPGmatFddzQ/feedshare-shrink_2048_1536/feedshare-shrink_2048_1536/0/1727097580150?e=1730332800&v=beta&t=6GiWyRnpzGyOJB4cmbsgapGioeOZqa0jYCx50o2__24)
 
 ### potential future TODOs
-- [ ] use https://blog.eleuther.ai/mutransfer to set hyperparametrs?
-- [ ] add option to continually train pre-existing models & update its training data/hyperparameters accordingly
+- [ ] use https://blog.eleuther.ai/mutransfer to set hyperparameters?
+- [ ] add option to continually train pre-existing models & update its training data / hyperparameters accordingly
 - [ ] add automated model comparison analysis by GPT4 like in the [TinyStories](https://arxiv.org/abs/2305.07759) paper into `model_comparison.ipynb`
 - [ ] add sparse/local/windowed attention mask options
 - [ ] switch to [flexAttention](https://pytorch.org/blog/flexattention/)???
 - [ ] take advantage of [torchao](https://pytorch.org/blog/pytorch-native-architecture-optimization/?utm_content=309679619&utm_medium=social&utm_source=twitter&hss_channel=tw-776585502606721024)???
 - [ ] switch big dataset from fineweb to [TxT360](https://huggingface.co/datasets/LLM360/TxT360)
+- [ ] setup training batches and attention mask to concatenate more than one sequence back to back when the docs are shorter than the model's maximum context length
+- [ ] implement kv caching based on the code in [karpathy's nanoLlama31](https://github.com/karpathy/nano-llama31) 
+- [ ] add batched inference to `inference.py`
+- [ ] figure out how to do random seed & exact replication versus shuffling a dataset. need both exact replicability and the ability to do multiple runs to test out variance across different seeds
+- [ ] train new tokenizers
+    - [x] tinystoriesv2
+    - [ ] fineweb
+    - [x] fineweb-edu
+    - [ ] make it possible to start from a tokenizer as a checkpoint to make a larger tokenizer
+- [ ] SFT / IT / RLHF pipeline? lmao no shot
+- [x] decrease reliance on `logging.py` by creating tests for each module
+    - [ ] build out tests for other files (currently they're just a bunch of first-drafts from Claude)
       
 ## how to contribute
 Other than the above TODO lists, appreciated contributions include:
