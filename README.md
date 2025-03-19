@@ -1,7 +1,7 @@
+# *this repo is depracated; see new version [NanoGPT-Lab](https://github.com/evintunador/nanogpt-lab)*
+
 # templateGPT
 ## about
-**this repo does not currently implement every feature I would like in order for it to be fully able to do what it was meant for. eventually if/when I do get back to it the goal is to get this capable of completely replicating GPT-2 (or a GPT-2 sized version of Llama3.1) on multiple GPUs and then start using it as a template for architecture experiments.**
-
 
 This is the model I edit whenever I want to test a new transformer architecture idea I have. It's designed to be:
 - flexible in that many large changes are tweakable from the config file rather than messing with the code
